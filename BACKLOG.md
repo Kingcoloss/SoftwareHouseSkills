@@ -41,6 +41,33 @@ Operation specs exist under `skills/software-house/operations/`. Implementation 
 - `lint` does not yet check for missing department agent indexes (flagged by Track B)
 - `fire.md` uses `rm` for adapter shims (justified as auto-generated, no unique content); revisit if a `mv`-to-temp recovery path becomes desirable
 
+## Update mechanism (cross-cutting; raised 2026-05-03)
+
+Current update story: `--symlink` mode = `git pull` only; copy mode = `git pull && ./install.sh --force`. Canonical state at `~/.software-house/` is preserved. Five gaps that will hurt as the skill evolves:
+
+1. **No version detection** -- install.sh does not read installed VERSION vs source VERSION. Re-running with older source silently overwrites. Fix: ship `skills/software-house/VERSION` (semver) and have install.sh compare and warn on downgrade.
+2. **No diff/changelog preview** -- "Overwrite ?" prompt does not show what changes. Fix: show `diff -r` summary or `CHANGELOG.md` entries between installed and source versions before confirming.
+3. **User edits to installed config are lost** -- `cp -R` blows away any local edits to `config/providers.json`, `config/models-config.json`, etc. Fix: split into skill-managed files (overwrite OK) plus `*.local.json` overlay files that install.sh never touches.
+4. **No schema migration** -- if Phase 2+ changes agent frontmatter (e.g. adds required field), existing agents under `~/.software-house/` and per-project `<project>/.software-house/agents/` go stale. Fix: `skills/software-house/migrations/NNN-<name>.sh` runner invoked by install.sh on version change.
+5. **Adapter shims do not re-sync** -- per-project `<project>/.claude/agents/<name>.md` shims are written once at hire time. If canonical agent schema changes, shims stay stale. Fix: `software-house lint --fix-adapters` to regenerate shims from canonical, or invoke regeneration from migration scripts.
+
+Recommended skill layout addition:
+
+```
+skills/software-house/
++-- VERSION                         <- semver, read by install.sh
++-- CHANGELOG.md                    <- shown during update prompt
++-- migrations/
+|   +-- 001-<name>.sh               <- auto-run on version change
++-- config/
+|   +-- providers.json              <- skill-managed (overwrite on update)
+|   +-- providers.local.json        <- user overlay (NEVER overwritten)
+|   +-- models-config.json          <- skill-managed
+|   +-- models-config.local.json    <- user overlay
+```
+
+Recommended new install.sh subcommand: `./install.sh --update` = source-version check + changelog display + migration runner + selective overwrite (preserving `*.local.*`). Suggested phase: 3.5 (between Phase 3 mobility and Phase 4 OKR), or earlier if external users start adopting before Phase 4.
+
 ## Done
 
 - Polish round 1 (Phase 1.1):
