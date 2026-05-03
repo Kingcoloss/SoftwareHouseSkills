@@ -2,44 +2,49 @@
 
 Tracking work items not yet shipped. Updated as part of each commit.
 
-## Phase 2 -- Recruitment (spec scaffolded; implementation pending)
+## Phase 2 -- Recruitment (DONE)
 
-Operation specs exist under `skills/software-house/operations/`. Implementation = wiring SKILL.md routing + reference impl + tests.
+Operation specs wired into SKILL.md routing table. Schemas and templates populated.
 
 - hire -- Create a new agent with provider/model/effort + egress consent gate (`hire.md`)
 - onboard -- Run onboarding checklist for new agent (`onboard.md`)
 - fire -- Remove an agent (Tier 4 destructive gate, two-step typed CONFIRM) (`fire.md`)
 - dept-create -- Bootstrap a new department (`dept-create.md`)
 - dept-assign -- Assign an agent to a department (`dept-assign.md`)
-- SKILL.md routing -- Add Phase 2 ops to operation routing table (not yet wired)
-- Schemas -- Define agent frontmatter JSON schema in `schemas/` (referenced by hire/fire/dept-assign)
+- SKILL.md routing -- Phase 2 ops wired into routing table
+- Schemas -- `schemas/agent.json` validates all frontmatter fields from `_shared.md §7`
+- Templates -- `templates/agent-starter.md` and `templates/dept-charter.md` populated
 
-## Phase 3 -- Mobility & Outsource (not started)
+## Phase 3 -- Mobility & Outsource (DONE)
 
-- transfer -- Move an agent to another team
-- second -- Matrix-assign an agent to a second team
-- promote -- Increase an agent's level/role
-- demote -- Decrease an agent's level/role
-- set-model -- Change provider/model/effort (egress re-consent on local to external)
-- outsource hire -- Add an agent to the freelance pool
-- contract -- Attach a freelance agent to a project
-- off-board -- Off-boarding checklist before removal
-- disband -- Remove an entire team (Tier 4 destructive gate)
+Operation specs written and wired into SKILL.md routing table.
 
-## Phase 4 -- OKR & Gamification (not started)
+- transfer -- Move an agent to another team (Tier 3, cross-project egress re-consent) (`transfer.md`)
+- second -- Matrix-assign an agent to a second team (Tier 3) (`second.md`)
+- promote -- Increase an agent's level/role (Tier 3) (`promote.md`)
+- demote -- Decrease an agent's level/role (Tier 3) (`demote.md`)
+- set-model -- Change provider/model/effort (Tier 3, egress re-consent on local-to-external) (`set-model.md`)
+- outsource hire -- Add an agent to the freelance pool (Tier 2) (`outsource-hire.md`)
+- contract -- Attach a freelance agent to a project (Tier 3) (`contract.md`)
+- off-board -- Off-boarding checklist before removal (Tier 3) (`off-board.md`)
+- disband -- Remove an entire team (Tier 4, two-step CONFIRM) (`disband.md`)
 
-- okr set -- Set OKRs at company, department, team, or role tier
-- okr review -- Review OKR progress and adjust
-- award-xp -- Grant XP and trigger level/achievement checks
-- dashboard -- Show gamification stats and skill-tree state across all agents
+## Phase 4 -- OKR & Gamification (DONE)
+
+Operation specs written and wired into SKILL.md routing table.
+
+- okr set -- Set OKRs at company, department, team tier (Tier 2, Tier 3 with --replace) (`okr-set.md`)
+- okr review -- Review OKR progress (Tier 1, read-only) (`okr-review.md`)
+- award-xp -- Grant XP and trigger level/achievement checks (Tier 2) (`award-xp.md`)
+- dashboard -- Show gamification stats and skill-tree state (Tier 1, read-only) (`dashboard.md`)
 
 ## Cross-cutting / future
 
 - Cross-machine sync (deferred -- design uses files so git-trackable later)
-- Templates dir is empty -- populate with starter agent and dept charter templates
 - Freelance pool agents do not get adapters at hire; trigger adapter generation on future `transfer` (flagged by Track B during Phase 2 design)
 - `lint` does not yet check for missing department agent indexes (flagged by Track B)
 - `fire.md` uses `rm` for adapter shims (justified as auto-generated, no unique content); revisit if a `mv`-to-temp recovery path becomes desirable
+- Reference implementation + integration tests (each operation spec is a markdown instruction set; no executable code yet)
 
 ## Update mechanism (cross-cutting; raised 2026-05-03)
 
@@ -77,3 +82,19 @@ Recommended new install.sh subcommand: `./install.sh --update` = source-version 
   - safety.md section 9 tightened to whole-word reject (avoids false abort on "yes, no problem")
   - AGENTS.md / GEMINI.md adapter dir listing updated (no longer "(planned)")
   - adapters/codex.md openai.yaml description updated to reflect shipped file
+- Phase 2 (Recruitment):
+  - Operation specs: hire.md, onboard.md, fire.md, dept-create.md, dept-assign.md
+  - SKILL.md routing table wired for Phase 2 commands
+  - schemas/agent.json: JSON Schema (draft-07) validating all frontmatter fields
+  - templates/agent-starter.md: starter template for new agents
+  - templates/dept-charter.md: starter template for department charters
+  - _shared.md §7: added Phase 2+ frontmatter fields (onboard_at, onboard_status, contract_type, etc.)
+- Phase 3 (Mobility & Outsource):
+  - Operation specs: transfer.md, second.md, promote.md, demote.md, set-model.md, outsource-hire.md, contract.md, off-board.md, disband.md
+  - SKILL.md routing table wired for Phase 3 commands
+  - _shared.md §7: added secondary_teams, promotion/demotion fields
+- Phase 4 (OKR & Gamification):
+  - Operation specs: okr-set.md, okr-review.md, award-xp.md, dashboard.md
+  - SKILL.md routing table wired for Phase 4 commands
+  - XP thresholds: 100/300/600/1000 for levels 2-5
+  - Achievement system: first-commit, code-reviewer-5, bug-hunter, team-lead, okr-champion

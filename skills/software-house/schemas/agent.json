@@ -1,0 +1,173 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "AgentFrontmatter",
+  "description": "Validates the YAML frontmatter of canonical agent files ($TEAM_AGENTS/<name>.md and $AGENTS_GLOBAL/<name>.md). Every field defined in _shared.md section 7 is covered.",
+  "type": "object",
+  "required": [
+    "name",
+    "description",
+    "provider",
+    "model",
+    "egress_consent",
+    "employee_id",
+    "role",
+    "position",
+    "status",
+    "hired_at",
+    "level",
+    "xp",
+    "effort_preset",
+    "classification",
+    "employment"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "name": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9-]{0,63}$",
+      "description": "Unique agent identifier. Must match ^[a-z][a-z0-9-]{0,63}$."
+    },
+    "description": {
+      "type": "string",
+      "description": "One-line role and specialty summary."
+    },
+    "provider": {
+      "type": "string",
+      "enum": [
+        "ollama",
+        "lmstudio",
+        "vllm",
+        "llamacpp",
+        "localai",
+        "jan",
+        "text-generation-webui",
+        "anthropic",
+        "openai",
+        "google",
+        "vertex",
+        "azure",
+        "bedrock",
+        "groq",
+        "together",
+        "fireworks",
+        "deepseek",
+        "mistral",
+        "cohere",
+        "xai",
+        "perplexity",
+        "openrouter",
+        "replicate",
+        "huggingface",
+        "novita"
+      ],
+      "description": "LLM inference provider. Must be a key in providers.json."
+    },
+    "model": {
+      "type": "string",
+      "description": "Provider-specific model identifier."
+    },
+    "egress_consent": {
+      "type": "string",
+      "pattern": "^none|external:\\d{4}-\\d{2}-\\d{2}$",
+      "description": "Consent status for external-provider egress. 'none' for local providers; 'external:<date>' when user has granted egress consent."
+    },
+    "employee_id": {
+      "type": "string",
+      "pattern": "^emp-\\d{3}$",
+      "description": "Unique employee ID in emp-NNN format."
+    },
+    "team": {
+      "type": ["string", "null"],
+      "description": "Team name the agent belongs to. null for outsource/freelance."
+    },
+    "department": {
+      "type": ["string", "null"],
+      "description": "Department name. null for outsource/freelance."
+    },
+    "role": {
+      "type": "string",
+      "description": "Role key matching a key in models-config.json defaults_by_role."
+    },
+    "position": {
+      "type": "string",
+      "description": "Human-readable position title."
+    },
+    "reports_to": {
+      "type": ["string", "null"],
+      "description": "Name of the agent this one reports to, or null."
+    },
+    "status": {
+      "type": "string",
+      "enum": ["onboarding", "active", "transfer", "alumni", "freelance"],
+      "description": "Current employment status."
+    },
+    "hired_at": {
+      "type": "string",
+      "format": "date",
+      "description": "ISO-8601 date (YYYY-MM-DD) when the agent was hired."
+    },
+    "level": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "Agent level (1-based)."
+    },
+    "xp": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Experience points."
+    },
+    "effort_preset": {
+      "type": "string",
+      "enum": ["low", "medium", "high"],
+      "description": "Default effort allocation for this agent."
+    },
+    "classification": {
+      "type": "string",
+      "enum": ["public", "internal", "confidential", "restricted"],
+      "description": "Data classification level."
+    },
+    "buddy": {
+      "type": ["string", "null"],
+      "description": "Name of the onboarding buddy, or null."
+    },
+    "employment": {
+      "type": "string",
+      "enum": ["permanent", "freelance"],
+      "description": "Employment type."
+    },
+    "hired_by_teams": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "List of team names that hired this freelance agent. Empty for permanent."
+    },
+    "achievements": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "List of achievement strings."
+    },
+    "onboard_at": {
+      "type": "string",
+      "format": "date",
+      "description": "ISO-8601 date (YYYY-MM-DD) when onboarding was completed. Optional."
+    },
+    "onboard_status": {
+      "type": "string",
+      "enum": ["done"],
+      "description": "Onboarding completion status. Optional; only value is 'done'."
+    },
+    "fired_at": {
+      "type": "string",
+      "format": "date",
+      "description": "ISO-8601 date (YYYY-MM-DD) when the agent was fired. Optional."
+    },
+    "updated_at": {
+      "type": "string",
+      "format": "date",
+      "description": "ISO-8601 date (YYYY-MM-DD) when the agent record was last updated. Optional."
+    }
+  }
+}

@@ -125,7 +125,22 @@ classification: internal                # public | internal | confidential | res
 buddy: <name | null>
 employment: permanent                   # permanent | freelance
 hired_by_teams: []                      # for freelance only
+secondary_teams: []                     # for matrix assignment (second.md)
 achievements: []
+contract_type: null                     # retainer | hourly | project (freelance only)
+contract_start: null                    # YYYY-MM-DD (freelance only)
+contract_end: null                      # YYYY-MM-DD | null (freelance only)
+rate: null                              # string (freelance only)
+onboard_at: null                        # YYYY-MM-DD (added by onboard.md)
+onboard_status: null                    # done (added by onboard.md)
+offboard_at: null                       # YYYY-MM-DD (added by off-board.md)
+offboard_status: null                   # pending | done (added by off-board.md)
+promotion_at: null                      # YYYY-MM-DD (added by promote.md)
+promotion_from_level: null              # integer (added by promote.md)
+demotion_at: null                       # YYYY-MM-DD (added by demote.md)
+demotion_from_level: null               # integer (added by demote.md)
+fired_at: null                          # YYYY-MM-DD (added by fire.md)
+updated_at: null                        # YYYY-MM-DD (added by any modifying op)
 ---
 ```
 
