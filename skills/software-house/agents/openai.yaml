@@ -1,0 +1,31 @@
+schema_version: 1
+name: software-house
+description: >
+  Run the user's computer like a software house company. HR-style management
+  of subagents-as-employees across Claude Code / Codex CLI / Gemini CLI, with
+  multi-provider support and typed consent for external-provider egress.
+
+invocation:
+  triggers:
+    - "/software-house"
+    - "software-house"
+  policy: explicit  # only invoked when user explicitly types /software-house
+
+required_tools:
+  - read
+  - write
+  - edit
+  - shell  # Codex shell tool; subject to allowlist/denylist in policies/privacy.md
+  - glob
+  - grep
+
+optional_tools: []
+
+permission_profile: standard
+
+# Note: Codex bypass flags (--dangerously-bypass-approvals-and-sandbox, --full-auto)
+# do NOT bypass the skill's own tier-2/3/4 confirmation gates. See policies/safety.md.
+notes:
+  - Skill is purely local; never sends data off the machine.
+  - External-provider agents require typed EGRESS-CONSENT-<provider> at hire time.
+  - State lives at ~/.software-house/; same directory is shared with Claude Code and Gemini CLI.

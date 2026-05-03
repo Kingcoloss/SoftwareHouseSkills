@@ -1,0 +1,153 @@
+{
+  "version": 1,
+  "defaults_by_role": {
+    "default": {
+      "provider": "ollama",
+      "model": "qwen3-coder:32b",
+      "effort": "medium"
+    },
+    "tech-lead": {
+      "provider": "ollama",
+      "model": "deepseek-v3:671b-q4_K_M",
+      "effort": "high"
+    },
+    "system-architect": {
+      "provider": "ollama",
+      "model": "deepseek-v3:671b-q4_K_M",
+      "effort": "high"
+    },
+    "code-reviewer": {
+      "provider": "ollama",
+      "model": "qwen3-coder:32b",
+      "effort": "medium"
+    },
+    "backend-dev": {
+      "provider": "ollama",
+      "model": "qwen3-coder:32b",
+      "effort": "medium"
+    },
+    "frontend-dev": {
+      "provider": "ollama",
+      "model": "qwen3-coder:32b",
+      "effort": "medium"
+    },
+    "doc-writer": {
+      "provider": "ollama",
+      "model": "qwen3-coder:14b",
+      "effort": "low"
+    },
+    "linter": {
+      "provider": "ollama",
+      "model": "qwen3-coder:7b",
+      "effort": "low"
+    },
+    "test-runner": {
+      "provider": "ollama",
+      "model": "qwen3-coder:7b",
+      "effort": "low"
+    }
+  },
+  "effort_presets": {
+    "low": {
+      "max_tokens": 4096,
+      "thinking": false,
+      "temperature": 0.2
+    },
+    "medium": {
+      "max_tokens": 16384,
+      "thinking": false,
+      "temperature": 0.3
+    },
+    "high": {
+      "max_tokens": 65536,
+      "thinking": true,
+      "temperature": 0.5
+    }
+  },
+  "model_aliases": {
+    "local-coder": {
+      "provider": "ollama",
+      "model": "qwen3-coder:32b"
+    },
+    "local-coder-small": {
+      "provider": "ollama",
+      "model": "qwen3-coder:7b"
+    },
+    "local-architect": {
+      "provider": "ollama",
+      "model": "deepseek-v3:671b-q4_K_M"
+    },
+    "external-flagship": {
+      "provider": "anthropic",
+      "model": "claude-opus-4-7"
+    },
+    "external-balanced": {
+      "provider": "anthropic",
+      "model": "claude-sonnet-4-6"
+    },
+    "external-fast": {
+      "provider": "anthropic",
+      "model": "claude-haiku-4-5"
+    }
+  },
+  "fallback_external": {
+    "default": {
+      "provider": "anthropic",
+      "model": "claude-sonnet-4-6",
+      "effort": "medium",
+      "note": "Use only after EGRESS-CONSENT-anthropic"
+    },
+    "tech-lead": {
+      "provider": "anthropic",
+      "model": "claude-opus-4-7",
+      "effort": "high",
+      "note": "Use only after EGRESS-CONSENT-anthropic"
+    },
+    "system-architect": {
+      "provider": "anthropic",
+      "model": "claude-opus-4-7",
+      "effort": "high",
+      "note": "Use only after EGRESS-CONSENT-anthropic"
+    },
+    "code-reviewer": {
+      "provider": "anthropic",
+      "model": "claude-sonnet-4-6",
+      "effort": "medium",
+      "note": "Use only after EGRESS-CONSENT-anthropic"
+    },
+    "backend-dev": {
+      "provider": "anthropic",
+      "model": "claude-sonnet-4-6",
+      "effort": "medium",
+      "note": "Use only after EGRESS-CONSENT-anthropic"
+    },
+    "frontend-dev": {
+      "provider": "anthropic",
+      "model": "claude-sonnet-4-6",
+      "effort": "medium",
+      "note": "Use only after EGRESS-CONSENT-anthropic"
+    },
+    "doc-writer": {
+      "provider": "anthropic",
+      "model": "claude-haiku-4-5",
+      "effort": "low",
+      "note": "Use only after EGRESS-CONSENT-anthropic"
+    },
+    "linter": {
+      "provider": "anthropic",
+      "model": "claude-haiku-4-5",
+      "effort": "low",
+      "note": "Use only after EGRESS-CONSENT-anthropic"
+    },
+    "test-runner": {
+      "provider": "anthropic",
+      "model": "claude-haiku-4-5",
+      "effort": "low",
+      "note": "Use only after EGRESS-CONSENT-anthropic"
+    }
+  },
+  "metadata": {
+    "schema_version": 1,
+    "policy": "Defaults bias to local providers per privacy.md section 7.3"
+  }
+}

@@ -1,0 +1,178 @@
+{
+  "version": 1,
+  "providers": {
+    "ollama": {
+      "name": "Ollama",
+      "class": "local",
+      "default_endpoint": "http://localhost:11434",
+      "api_style": "openai-compatible,native"
+    },
+    "lmstudio": {
+      "name": "LM Studio",
+      "class": "local",
+      "default_endpoint": "http://localhost:1234",
+      "api_style": "openai-compatible"
+    },
+    "vllm": {
+      "name": "vLLM",
+      "class": "local",
+      "default_endpoint": "http://localhost:8000",
+      "api_style": "openai-compatible"
+    },
+    "llamacpp": {
+      "name": "llama.cpp",
+      "class": "local",
+      "default_endpoint": "http://localhost:8080",
+      "api_style": "openai-compatible"
+    },
+    "localai": {
+      "name": "LocalAI",
+      "class": "local",
+      "default_endpoint": "http://localhost:8080",
+      "api_style": "openai-compatible"
+    },
+    "jan": {
+      "name": "Jan",
+      "class": "local",
+      "default_endpoint": "http://localhost:1337",
+      "api_style": "openai-compatible"
+    },
+    "text-generation-webui": {
+      "name": "Text Generation WebUI",
+      "class": "local",
+      "default_endpoint": "http://localhost:5000",
+      "api_style": "openai-compatible"
+    },
+    "anthropic": {
+      "name": "Anthropic",
+      "class": "external",
+      "default_endpoint": "api.anthropic.com",
+      "api_style": "anthropic",
+      "notes": "Claude API hosted on Anthropic infrastructure."
+    },
+    "openai": {
+      "name": "OpenAI",
+      "class": "external",
+      "default_endpoint": "api.openai.com",
+      "api_style": "openai-compatible",
+      "notes": "GPT models via OpenAI API."
+    },
+    "google": {
+      "name": "Google Generative AI",
+      "class": "external",
+      "default_endpoint": "generativelanguage.googleapis.com",
+      "api_style": "google",
+      "notes": "Gemini models via Google Generative AI API."
+    },
+    "vertex": {
+      "name": "Google Vertex AI",
+      "class": "external",
+      "default_endpoint": "<region>-aiplatform.googleapis.com",
+      "api_style": "google",
+      "notes": "Gemini and other models via Google Cloud Vertex AI."
+    },
+    "azure": {
+      "name": "Azure OpenAI",
+      "class": "external",
+      "default_endpoint": "<resource>.openai.azure.com",
+      "api_style": "openai-compatible",
+      "notes": "OpenAI models hosted on Azure."
+    },
+    "bedrock": {
+      "name": "AWS Bedrock",
+      "class": "external",
+      "default_endpoint": "bedrock-runtime.<region>.amazonaws.com",
+      "api_style": "native",
+      "notes": "Multi-vendor generative AI models via AWS Bedrock."
+    },
+    "groq": {
+      "name": "Groq",
+      "class": "external",
+      "default_endpoint": "api.groq.com",
+      "api_style": "openai-compatible",
+      "notes": "Fast inference LLM API."
+    },
+    "together": {
+      "name": "Together AI",
+      "class": "external",
+      "default_endpoint": "api.together.xyz",
+      "api_style": "openai-compatible",
+      "notes": "Open-source model inference platform."
+    },
+    "fireworks": {
+      "name": "Fireworks AI",
+      "class": "external",
+      "default_endpoint": "api.fireworks.ai",
+      "api_style": "openai-compatible",
+      "notes": "Fast LLM inference service."
+    },
+    "deepseek": {
+      "name": "DeepSeek",
+      "class": "external",
+      "default_endpoint": "api.deepseek.com",
+      "api_style": "openai-compatible",
+      "notes": "DeepSeek language models API."
+    },
+    "mistral": {
+      "name": "Mistral",
+      "class": "external",
+      "default_endpoint": "api.mistral.ai",
+      "api_style": "native",
+      "notes": "Mistral language models API."
+    },
+    "cohere": {
+      "name": "Cohere",
+      "class": "external",
+      "default_endpoint": "api.cohere.ai",
+      "api_style": "native",
+      "notes": "Cohere language models API."
+    },
+    "xai": {
+      "name": "xAI",
+      "class": "external",
+      "default_endpoint": "api.x.ai",
+      "api_style": "openai-compatible",
+      "notes": "Grok models via xAI API."
+    },
+    "perplexity": {
+      "name": "Perplexity AI",
+      "class": "external",
+      "default_endpoint": "api.perplexity.ai",
+      "api_style": "openai-compatible",
+      "notes": "Perplexity online LLM API."
+    },
+    "openrouter": {
+      "name": "OpenRouter",
+      "class": "external",
+      "default_endpoint": "openrouter.ai/api",
+      "api_style": "openai-compatible",
+      "notes": "Unified API for multiple model providers."
+    },
+    "replicate": {
+      "name": "Replicate",
+      "class": "external",
+      "default_endpoint": "api.replicate.com",
+      "api_style": "native",
+      "notes": "Machine learning models as APIs."
+    },
+    "huggingface": {
+      "name": "Hugging Face",
+      "class": "external",
+      "default_endpoint": "api-inference.huggingface.co",
+      "api_style": "native",
+      "notes": "Inference API for Hugging Face models."
+    },
+    "novita": {
+      "name": "Novita AI",
+      "class": "external",
+      "default_endpoint": "api.novita.ai",
+      "api_style": "openai-compatible",
+      "notes": "Image and text generation API."
+    }
+  },
+  "metadata": {
+    "schema_version": 1,
+    "default_class_preference": "local",
+    "egress_consent_required_for_class": "external"
+  }
+}
