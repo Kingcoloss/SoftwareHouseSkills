@@ -60,7 +60,10 @@ SoftwareHouseSkills/
         |   +-- org-chart.md           Render ASCII org tree (Tier 1)
         |   +-- lint.md                Structural integrity check (Tier 1)
         |
-        +-- adapters/                  (planned) Harness-specific thin shims
+        +-- adapters/                  Harness-specific thin shims
+        |   +-- claude-code.md         Claude Code harness adapter
+        |   +-- codex.md               OpenAI Codex CLI adapter
+        |   +-- gemini.md              Gemini CLI adapter
         +-- config/
         |   +-- providers.json         Provider catalog (local vs. external, egress flags)
         |   +-- models-config.json     Default provider+model+effort per role

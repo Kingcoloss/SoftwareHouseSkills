@@ -242,7 +242,7 @@ This makes both tier confirmation and egress consent auditable retrospectively.
 Affirmative parsing for tier 2 and tier 3 (and Tier-4 step 1) is intentionally narrow:
 
 - Accept (case-insensitive): `yes`, `y`, `proceed`, `ok`, `Yes, proceed`, `Yes`, `OK`, `Y`.
-- Reject silently if the message contains any of: `no`, `cancel`, `stop`, `abort`, `wait`, `n`, `nope` — even if `yes` also appears later. Mixed signals = abort.
+- Reject silently if the message contains any whole-word occurrence of: `no`, `cancel`, `stop`, `abort`, `wait`, `n`, `nope` — even if `yes` also appears later. Mixed signals = abort. Use word boundary matching (regex `\bno\b`, `\bn\b`, etc., case-insensitive) to avoid false positives like "yes, no problem".
 - A response that does not start with an accepted affirmative token, treat as non-affirmative. Abort.
 
 Typed-token parsing for Tier-4 step 2 and egress consent:

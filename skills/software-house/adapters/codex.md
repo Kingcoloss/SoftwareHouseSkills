@@ -61,9 +61,10 @@ Codex requires a restart after editing `config.toml`.
 
 `agents/openai.yaml` (shipped with the skill) provides Codex-specific
 invocation policy and tool dependency metadata per Codex conventions.
-This file is a next-step deliverable -- it is referenced here so the
-adapter and the eventual file are consistent. Until it exists, Codex
-falls back to its defaults.
+This file specifies the skill's trigger patterns (`/software-house`),
+required tools (read, write, edit, shell, glob, grep), and permission
+profile. Codex reads this file at registration time to configure the
+skill's invocation behavior and tool access.
 
 ---
 

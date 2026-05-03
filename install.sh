@@ -43,11 +43,12 @@ die_usage() {
 }
 
 confirm() {
-    # $1 = prompt text; returns 0 if user says y/Y, 1 otherwise
+    # $1 = prompt text; returns 0 if user says yes/y/proceed/ok (case-insensitive), 1 otherwise
+    # Matches safety.md section 9 affirmative protocol
     printf '%s [y/N] ' "$1"
     read -r _answer
     case "${_answer}" in
-        y|Y) return 0 ;;
+        y|Y|yes|YES|Yes|proceed|Proceed|PROCEED|ok|OK|Ok) return 0 ;;
         *)   return 1 ;;
     esac
 }
@@ -133,6 +134,12 @@ detect_claude_code() {
 }
 
 detect_codex() {
+    # Check CODEX_HOME env var first; fall back to ~/.agents, then ~/.codex
+    _codex_root="${CODEX_HOME:-}"
+    if test -n "${_codex_root}" && test -d "${_codex_root}"; then
+        printf "present:codex-home"
+        return 0
+    fi
     if test -d "${HOME}/.agents"; then
         printf "present:agents"
     elif test -d "${HOME}/.codex"; then
@@ -156,6 +163,11 @@ GE_STATUS="$(detect_gemini)"
 
 # Resolve Codex dir label and install path
 case "${CX_STATUS}" in
+    present:codex-home)
+        _codex_root="${CODEX_HOME:-}"
+        CX_DIR="${CODEX_HOME}"
+        CX_TARGET="${_codex_root}/skills/software-house"
+        ;;
     present:agents)
         CX_DIR="~/.agents"
         CX_TARGET="${HOME}/.agents/skills/software-house"
@@ -192,7 +204,7 @@ CC_ACTION="$(_action_label "${CC_STATUS}" "${CC_TARGET}" "${FLAG_UNINSTALL}")"
 CX_ACTION="$(_action_label "${CX_STATUS}" "${CX_TARGET}" "${FLAG_UNINSTALL}")"
 GE_ACTION="$(_action_label "${GE_STATUS}" "${GE_TARGET}" "${FLAG_UNINSTALL}")"
 
-# Replace "present:agents" / "present:codex" with "present" for display
+# Replace "present:agents" / "present:codex" / "present:codex-home" with "present" for display
 _display_status() {
     case "$1" in
         present:*) printf "present" ;;
@@ -261,8 +273,26 @@ _harness_selected() {
 # ---------------------------------------------------------------------------
 
 check_source() {
-    if ! test -f "${SOURCE}/SKILL.md"; then
-        die "Source skill not found: ${SOURCE}/SKILL.md is missing. Is this the correct repository?"
+    # Verify all required source files exist
+    _required_files="
+        SKILL.md
+        policies/safety.md
+        policies/privacy.md
+        manifest.yaml
+        config/providers.json
+        config/models-config.json
+    "
+
+    _missing=0
+    for _file in ${_required_files}; do
+        if ! test -f "${SOURCE}/${_file}"; then
+            printf 'Error: Required source file missing: %s/%s\n' "${SOURCE}" "${_file}" >&2
+            _missing=1
+        fi
+    done
+
+    if test "${_missing}" -eq 1; then
+        die "One or more required source files are missing. Is this the correct repository?"
     fi
 }
 
