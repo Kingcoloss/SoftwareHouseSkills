@@ -8,6 +8,8 @@
 
 Hire an agent into the freelance/outsource pool at `$AGENTS_GLOBAL/<name>.md`. Similar to `hire --pool` but with outsource-specific semantics: contract terms, hourly rate placeholder, and contract duration. The agent is added to the `$OUTSOURCE_MANIFEST` freelancers list. No per-project adapters are written at hire time (pool agents get adapters when contracted to a project via the `contract` operation). If the provider is external, an egress consent gate is required before writing any file.
 
+**NOTE -- Freelance pool agents and adapters:** Freelance pool agents do NOT receive per-project adapter shims at hire time. Adapters are generated only when the agent is attached to a project team -- either via the `contract` operation (which writes adapters in the target project) or via the `transfer` operation (when a freelance agent is transferred from the pool to a project team, Step 9 generates adapters at that point). This is by design: a pool agent has no project context at hire time, so there is no project directory in which to write adapters. Do not attempt to generate adapters during outsource-hire.
+
 ## Invocation patterns
 
 | Command | Behavior |
@@ -17,6 +19,8 @@ Hire an agent into the freelance/outsource pool at `$AGENTS_GLOBAL/<name>.md`. S
 | `outsource-hire <name> --role <role> --effort <e>` | Override effort preset |
 | `outsource-hire <name> --role <role> --contract-type <type>` | Specify contract type (default: retainer) |
 | `outsource-hire <name> --role <role> --contract-end <date>` | Specify contract end date |
+
+The command may also be invoked as `outsource hire` (space-separated) per Phase 3 routing in `SKILL.md`.
 
 ## Inputs
 
@@ -64,13 +68,11 @@ Validate `--contract-end` is a valid ISO-8601 date (`YYYY-MM-DD`) or `null`. If 
 - Scope: `freelance`
 - Canonical agent file: `$AGENTS_GLOBAL/<name>.md`
 - No per-project adapters (written later by `contract` operation)
-- Wiki people page: `$WIKI_PEOPLE/<name>.md` (written for company-level visibility)
+- No wiki people page at hire time (written later by `contract` operation when the agent is first contracted to a project)
 
 ### 3. Check for conflicts
 
 Check whether `$AGENTS_GLOBAL/<name>.md` already exists. If so, abort per Precondition 4.
-
-Check `$WIKI_PEOPLE/<name>.md` as well. If that exists but the agent file does not, warn: `Warning: wiki entry exists for <name> without a canonical agent file. Proceeding will create both.` and continue.
 
 ### 4. Egress consent gate (external providers only)
 
@@ -106,7 +108,6 @@ Build the full file list that will be created. Print it:
 ```
 I will create the following for freelance agent '<name>':
   Canonical: $AGENTS_GLOBAL/<name>.md
-  Wiki:      $WIKI_PEOPLE/<name>.md
   Manifest:  $OUTSOURCE_MANIFEST
   Audit log:  $AUDIT_LOG
 ```
@@ -179,33 +180,7 @@ For the `employee_id`: glob `$WIKI_PEOPLE/` and `$AGENTS_GLOBAL/` for existing `
 - `none` if provider is local
 - `external:<utc-date-of-consent>` if provider is external (date is the timestamp from Step 4)
 
-### 7. Write wiki people page
-
-Write `$WIKI_PEOPLE/<name>.md` with the same frontmatter (identical fields). Add a body section:
-
-```markdown
----
-<same frontmatter as canonical agent file>
----
-
-# <name>
-
-## Freelance Agent
-
-Contract type: <contract-type>
-Contract start: <contract-date>
-Contract end: <contract-end | "open-ended">
-
-## Onboarding
-
-Briefing not yet written. Run `/software-house onboard <name> --pool` to generate.
-
-## Notes
-
-(empty)
-```
-
-### 8. Update outsource manifest
+### 7. Update outsource manifest
 
 Read `$OUTSOURCE_MANIFEST` (create with skeleton if missing). The manifest is a JSON file at `$OUTSOURCE_MANIFEST` (`~/.software-house/company/outsource/manifest.json`).
 
@@ -236,22 +211,21 @@ Append the new agent entry to the `freelancers` array:
 
 Update `updated_at` to current UTC timestamp. Write atomically per `_shared.md §6`.
 
-### 9. Rebuild indexes
+### 8. Rebuild indexes
 
 Rebuild `$COMPANY_INDEX` per `_shared.md §8`.
 
-### 10. Append audit log entry
+### 9. Append audit log entry
 
 ```json
-{"ts":"<utc>","actor":"user","op":"outsource-hire","scope":"company","args":{"name":"<name>","role":"<role>","provider":"<provider>","model":"<model>","effort":"<effort>","contract_type":"<contract-type>","contract_end":"<contract-end|null>"},"diff":{"created":["$AGENTS_GLOBAL/<name>.md","$WIKI_PEOPLE/<name>.md"],"updated":["$OUTSOURCE_MANIFEST","$COMPANY_INDEX"]},"confirmation":{"tier":2,"prompt":"<exact box text>","response":"<user verbatim>","ts":"<utc>"},"egress_consent":{"required":<bool>,"granted":"<token|null>","provider":"<provider|null>","ts":"<utc|null>"},"result":"ok"}
+{"ts":"<utc>","actor":"user","op":"outsource-hire","scope":"company","args":{"name":"<name>","role":"<role>","provider":"<provider>","model":"<model>","effort":"<effort>","contract_type":"<contract-type>","contract_end":"<contract-end|null>"},"diff":{"created":["$AGENTS_GLOBAL/<name>.md"],"updated":["$OUTSOURCE_MANIFEST","$COMPANY_INDEX"]},"confirmation":{"tier":2,"prompt":"<exact box text>","response":"<user verbatim>","ts":"<utc>"},"egress_consent":{"required":<bool>,"granted":"<token|null>","provider":"<provider|null>","ts":"<utc|null>"},"result":"ok"}
 ```
 
-### 11. Report to user
+### 10. Report to user
 
 ```
 Hired freelance agent <name> (<role>)
   Canonical:    $AGENTS_GLOBAL/<name>.md
-  Wiki:         $WIKI_PEOPLE/<name>.md
   Provider:     <provider> [<class>]
   Model:        <model>
   Effort:       <effort>

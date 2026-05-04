@@ -6,7 +6,9 @@
 
 ## Purpose
 
-Move an agent from one team to another. The canonical agent file's `team` field is updated. The agent is removed from the old team's roster and added to the new team's roster. Harness adapters are removed from the old team's project directory and written in the new team's project directory. If the transfer crosses projects with different `$MODELS_CONFIG` (different provider classification), an egress re-consent gate is triggered before the Tier-3 confirmation. The transfer is logged to `$TEAM_TRANSFERS` for both teams.
+Move an agent from one team to another. The canonical agent file's `team` field is updated. The agent is removed from the old team's roster and added to the new team's roster. Harness adapters are removed from the old team's project directory and written in the new team's project directory. If the transfer crosses project boundaries, harness adapters are removed from the old project and written in the new project. The transfer is logged to `$TEAM_TRANSFERS` for both teams.
+
+**Freelance pool to project team transfer:** When a freelance pool agent (employment: freelance, team: null) is transferred to a project team, the agent has no old project or old adapters. In this case, Step 8 (Remove adapters from old project) is a no-op. Step 9 (Write adapters in new project) generates adapter shims for the first time, following the same adapter generation logic as the `contract` operation (Step 8 of contract.md). This is the point at which freelance pool agents receive per-project adapter shims.
 
 ## Invocation patterns
 
@@ -37,10 +39,15 @@ Move an agent from one team to another. The canonical agent file's `team` field 
 
 Read the canonical agent file. Parse frontmatter. Extract: `team`, `role`, `provider`, `model`, `effort_preset`, `department`, `status`, `classification`, `employment`, `hired_by_teams`.
 
+Detect freelance pool origin:
+- If `employment: freelance` and `team: null`, the agent is being transferred from the freelance pool to a project team. Mark this as a `freelance-to-project` transfer.
+- In this case, there is no old team and no old project. Steps 6, 8, and 10 (old-team operations) are skipped or become no-ops.
+
 Resolve the current team:
 - If `--team <current>` is given, use it.
 - Otherwise, use the `team` field from the agent frontmatter.
-- If `team` is `null` and `--team` is not given, refuse: `Error: <name> has no current team. Use --team to specify the source, or use /software-house contract instead.`
+- If `team` is `null` and `--team` is not given, and the agent is `employment: freelance`, treat as a `freelance-to-project` transfer (no old team).
+- If `team` is `null` and `--team` is not given, and the agent is NOT freelance, refuse: `Error: <name> has no current team. Use --team to specify the source, or use /software-house contract instead.`
 
 Resolve the destination team from `--to <team>`:
 - Read `$WIKI_TEAMS/<team>.md`. Parse frontmatter. Extract `project_path`, `department`, `lead`, `members`.
@@ -48,74 +55,42 @@ Resolve the destination team from `--to <team>`:
 
 Determine old project root from `$PROJECTS_INDEX` using the old team name. Determine new project root from `$PROJECTS_INDEX` using the new team name or from the `project_path` field in the new team's wiki page.
 
-### 2. Detect egress re-consent requirement
-
-If the transfer crosses project boundaries (different project roots), the new project may use a different `$MODELS_CONFIG`. Read `$PROVIDERS_CONFIG` to classify the agent's current provider.
-
-- If current provider is `local` and the new project's default for the agent's role (from the new project's `$MODELS_CONFIG`) is `external`, print a warning but do NOT require re-consent (the agent's own provider does not change; the warning is informational only).
-- If current provider is `external`, check whether the new project's `$MODELS_CONFIG` maps the agent's role to a different external provider. If the provider key would change, egress re-consent IS required: set `egress_reconsent_required = true` and record the new provider.
-- If the agent's provider stays the same, no re-consent is needed.
-
-When `egress_reconsent_required` is true, this must happen BEFORE the Tier-3 confirmation.
-
-### 3. Egress re-consent gate (if required)
-
-If `egress_reconsent_required` is true, print the egress consent prompt per `safety.md §3`:
-
-```
-+----------------------------------------------------------+
-| WARNING -- External provider selected: <provider>        |
-| When this agent runs, its conversations will be sent to: |
-|   <default_endpoint from providers.json>                 |
-| This egress is performed by the agent runtime, not by    |
-| this skill. The skill itself never makes network calls.  |
-|                                                          |
-| To approve this egress, type the literal token:          |
-|   EGRESS-CONSENT-<provider>                              |
-| Anything else, or no response, will cancel the transfer.  |
-+----------------------------------------------------------+
-```
-
-Stop. Wait for the next user message. Parse byte-exact per `safety.md §9`:
-
-- If the token `EGRESS-CONSENT-<provider>` appears, record it and advance to Step 4.
-- Otherwise, abort. Print: `Transfer cancelled -- egress consent not given for provider <provider>.` Do not log.
-
-### 4. Compute diff
+### 2. Compute diff
 
 Build the modification plan showing all changes:
 
 ```
 File: <canonical agent file> (frontmatter)
-  field team: <old-team> -> <new-team>
+  field team: <old-team | null> -> <new-team>
   field status: <current-status> -> active
   field updated_at: <old-value | "absent"> -> <utc-date>
 
 File: $WIKI_PEOPLE/<name>.md (frontmatter)
-  field team: <old-team> -> <new-team>
+  field team: <old-team | null> -> <new-team>
 
-File: $WIKI_TEAMS/<old-team>.md (frontmatter)
+File: $WIKI_TEAMS/<old-team>.md (frontmatter)  [SKIP if freelance-to-project]
   members list: remove <name>
 
 File: $WIKI_TEAMS/<new-team>.md (frontmatter)
   members list: add <name>
 
 Adapters to REMOVE (old project):
-  <list each adapter path, one per line, or "(none detected)">
+  <list each adapter path, one per line, or "(none detected)" or "(freelance pool -- no old adapters)" if freelance-to-project>
 
 Adapters to WRITE (new project):
   <list each adapter path, one per line, or "(none detected)">
+  <If freelance-to-project: note "first adapter generation for this agent">
 
 Transfer logs:
-  $TEAM_TRANSFERS (old project): append entry
+  $TEAM_TRANSFERS (old project): append entry  [SKIP if freelance-to-project]
   $TEAM_TRANSFERS (new project): append entry
 ```
 
 Also update `$AUDIT_LOG` (append) and `$COMPANY_INDEX` (rebuild).
 
-### 5. Tier-3 confirmation
+### 3. Tier-3 confirmation
 
-Print the full diff from Step 4. Print the paths that will be modified. Then print the Tier-3 prompt from `safety.md §3`:
+Print the full diff from Step 2. Print the paths that will be modified. Then print the Tier-3 prompt from `safety.md §3`:
 
 ```
 +----------------------------------------------------------+
@@ -126,7 +101,7 @@ Print the full diff from Step 4. Print the paths that will be modified. Then pri
 
 Stop. Wait for the next user message. Parse per `safety.md §9`. If non-affirmative, abort. Do not log.
 
-### 6. Update canonical agent file
+### 4. Update canonical agent file
 
 Using atomic write per `_shared.md §6`, update the following frontmatter fields:
 
@@ -136,36 +111,36 @@ status: active
 updated_at: <utc-date YYYY-MM-DD>
 ```
 
-If `egress_reconsent_required` was true and consent was given, also update:
-
-```yaml
-egress_consent: external:<utc-date>
-```
-
-### 7. Update wiki people page
+### 5. Update wiki people page
 
 If `$WIKI_PEOPLE/<name>.md` exists, update `team: <new-team>` in the frontmatter using atomic write per `_shared.md §6`.
 
-### 8. Remove agent from old team roster
+### 6. Remove agent from old team roster
 
-Read `$WIKI_TEAMS/<old-team>.md`. Remove `<name>` from the `members` list in the frontmatter. Update `updated_at: <utc-date>` field. Write atomically per `_shared.md §6`.
+If this is a `freelance-to-project` transfer (no old team), skip this step entirely.
 
-### 9. Add agent to new team roster
+Otherwise: Read `$WIKI_TEAMS/<old-team>.md`. Remove `<name>` from the `members` list in the frontmatter. Update `updated_at: <utc-date>` field. Write atomically per `_shared.md §6`.
+
+### 7. Add agent to new team roster
 
 Read `$WIKI_TEAMS/<new-team>.md`. Append `<name>` to the `members` list in the frontmatter. Update `updated_at: <utc-date>` field. Write atomically per `_shared.md §6`.
 
-### 10. Remove adapters from old project
+### 8. Remove adapters from old project
 
-For each harness adapter path in the old project that exists:
+If this is a `freelance-to-project` transfer, the agent has no old project and no old adapters. Skip this step entirely.
+
+Otherwise: For each harness adapter path in the old project that exists:
 - Claude Code adapter: `rm <old-project>/.claude/agents/<name>.md`
 - Codex CLI adapter: `rm <old-project>/.codex/agents/<name>.md`
 - Gemini CLI extension dir: `rm -rf <old-project>/.gemini/extensions/<name>/`
 
 These are auto-generated shims with no unique content. Removal is safe.
 
-### 11. Write adapters in new project
+### 9. Write adapters in new project
 
 Detect installed harnesses under the new project root. For each detected harness, write the adapter per `_shared.md §3`:
+
+If this is a `freelance-to-project` transfer, this is the first time the agent receives per-project adapter shims. The adapter generation logic follows the same pattern as the `contract` operation (Step 8 of contract.md): read the canonical agent file at `$AGENTS_GLOBAL/<name>.md`, extract `role`, `provider`, `model`, `effort_preset`, and generate adapters pointing to the canonical path.
 
 #### Claude Code adapter
 
@@ -229,9 +204,9 @@ Provider: <provider>
 Effort: <effort_preset>
 ```
 
-### 12. Append to transfer logs
+### 10. Append to transfer logs
 
-Append a transfer entry to the old team's `$TEAM_TRANSFERS`:
+If this is NOT a `freelance-to-project` transfer, append a transfer entry to the old team's `$TEAM_TRANSFERS`:
 
 ```
 <utc-timestamp> | <name> | out | from: <old-team> | to: <new-team>
@@ -249,17 +224,17 @@ If either `$TEAM_TRANSFERS` file does not exist, create it with a header line:
 # Transfer Log -- <team>
 ```
 
-### 13. Rebuild indexes
+### 11. Rebuild indexes
 
 Rebuild `$TEAM_INDEX` for both old and new projects (if they exist) and `$COMPANY_INDEX` per `_shared.md §8`.
 
-### 14. Append audit log entry
+### 12. Append audit log entry
 
 ```json
-{"ts":"<utc>","actor":"user","op":"transfer","scope":"agent:<name>","args":{"name":"<name>","from_team":"<old-team>","to_team":"<new-team>"},"diff":{"updated":["<canonical agent path>","$WIKI_PEOPLE/<name>.md","$WIKI_TEAMS/<old-team>.md","$WIKI_TEAMS/<new-team>.md"],"removed":["<old adapter paths>"],"created":["<new adapter paths>","<transfer log entries>"]},"confirmation":{"tier":3,"prompt":"<exact box text>","response":"<user verbatim>","ts":"<utc>"},"egress_consent":{"required":<bool>,"granted":"<token|null>","provider":"<provider|null>","ts":"<utc|null>"},"result":"ok"}
+{"ts":"<utc>","actor":"user","op":"transfer","scope":"agent:<name>","args":{"name":"<name>","from_team":"<old-team>","to_team":"<new-team>"},"diff":{"updated":["<canonical agent path>","$WIKI_PEOPLE/<name>.md","$WIKI_TEAMS/<old-team>.md","$WIKI_TEAMS/<new-team>.md"],"removed":["<old adapter paths>"],"created":["<new adapter paths>","<transfer log entries>"]},"confirmation":{"tier":3,"prompt":"<exact box text>","response":"<user verbatim>","ts":"<utc>"},"egress_consent":{"required":false},"result":"ok"}
 ```
 
-### 15. Report to user
+### 13. Report to user
 
 ```
 Transferred <name> from <old-team> to <new-team>
@@ -267,7 +242,6 @@ Transferred <name> from <old-team> to <new-team>
   Wiki:         $WIKI_PEOPLE/<name>.md
   Old adapters: removed (<list or "none">)
   New adapters: written (<list or "none">)
-  Egress:       <none | re-consented at <utc-date>>
 
 Next steps:
   /software-house show <name>           verify the updated agent record
@@ -280,7 +254,6 @@ Next steps:
 - Agent status is alumni -> refuse before any gate; no log.
 - Destination team not found -> refuse before any gate; no log.
 - Agent already on destination team -> refuse; no log.
-- Egress re-consent not given -> abort; no log; no changes.
 - Confirmation non-affirmative -> abort; no log; no changes.
 - `mv` or `rm` failure on adapter -> log warning but continue; report the path that could not be removed.
 - Atomic write failure -> roll back `.tmp` files; log `result: failed`.
@@ -294,6 +267,9 @@ Next steps:
 # Transfer bob with explicit source team
 /software-house transfer bob --to api-gateway --team backend
 
-# Transfer across projects (may trigger egress re-consent if provider differs)
+# Transfer across projects (adapters moved between project dirs)
 /software-house transfer carol --to frontend --team backend
+
+# Transfer a freelance pool agent to a project team (first adapter generation)
+/software-house transfer dev-contractor --to api-gateway
 ```
