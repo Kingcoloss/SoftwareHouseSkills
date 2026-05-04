@@ -84,6 +84,18 @@ Provider/egress checks per `policies/privacy.md §7.6`:
 - `$COMPANY_INDEX` lists pages that no longer exist → **warning** (run `lint --fix-suggestions` to get rebuild command).
 - A wiki page exists but is not in `$COMPANY_INDEX` → **warning**.
 
+#### 2.8 Department agent index integrity
+
+Each department may maintain an agent index at `$DEPARTMENTS_HOME/<dept>/agents.json`. This check verifies that the index accurately reflects the agents actually present in that department.
+
+- `$DEPARTMENTS_HOME/<dept>/agents.json` exists and lists an agent name that has no corresponding canonical agent file (either `$TEAM_AGENTS/<name>.md` for project-scoped agents or `$AGENTS_GLOBAL/<name>.md` for freelance agents, with `department: <dept>` in frontmatter) → **error** (phantom entry: index lists agent that does not exist or is not in this department).
+- A canonical agent file exists with `department: <dept>` in its frontmatter but is not listed in `$DEPARTMENTS_HOME/<dept>/agents.json` → **warning** (missing entry: agent belongs to department but index does not include it).
+- `$DEPARTMENTS_HOME/<dept>/` directory exists but contains no `agents.json` → **info** (department has no agent index; one will be created by the next `dept-assign` or `rebuild indexes` operation).
+
+Resolution suggestions:
+- For phantom entries: run `/software-house lint --fix-suggestions` which will suggest running `/software-house dept-assign` to re-sync the index, or manually remove the phantom entry from `agents.json`.
+- For missing entries: run `/software-house dept-assign <name> --dept <dept>` to add the agent to the department index.
+
 ### 3. Render
 
 Group findings by severity, then by category:
