@@ -71,8 +71,8 @@ SoftwareHouseSkills/
         +-- commands/
         |   +-- software-house.toml   Gemini CLI custom command definition
         |
-        +-- templates/                 (planned) Agent frontmatter templates
-        +-- schemas/                   (planned) JSON schemas for agent and team files
+        +-- templates/                 Agent frontmatter templates
+        +-- schemas/                   JSON schemas for agent and team files
         |
         +-- agents/
             +-- openai.yaml            Codex agent UI metadata and invocation policy
@@ -92,7 +92,11 @@ SoftwareHouseSkills/
    /software-house <command>
    ```
 
-   Available Phase 1 commands: `init`, `list`, `show`, `org-chart`, `lint`.
+   Available commands:
+   Phase 1 (Foundation): `init`, `list`, `show`, `org-chart`, `lint`
+   Phase 2 (Recruitment): `hire`, `onboard`, `fire`, `dept create`, `dept assign`
+   Phase 3 (Mobility & Outsource): `transfer`, `second`, `promote`, `demote`, `set-model`, `outsource hire`, `contract`, `off-board`, `disband`
+   Phase 4 (OKR & Gamification): `okr set`, `okr review`, `award-xp`, `dashboard`
 
 3. **State** -- canonical company state lives at `~/.software-house/`. All harnesses
    read and write the same directory.

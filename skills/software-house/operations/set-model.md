@@ -120,8 +120,12 @@ File: <canonical agent file> (frontmatter)
 File: $WIKI_PEOPLE/<name>.md (frontmatter)
   <same fields as canonical>
 
-Adapters to RE-WRITE (all detected harnesses):
-  <list each adapter path, one per line, or "(none detected)">
+Adapters to RE-WRITE (all detected harnesses across all project roots):
+  Primary project:
+    <list each adapter path, one per line, or "(none detected)">
+  <For each secondary/hired-by team with adapters:>
+  <team-name> project:
+    <list each adapter path, one per line, or "(none detected)">
 ```
 
 Also update `$AUDIT_LOG` (append).
@@ -241,6 +245,16 @@ test -d ~/.gemini  -> HAS_GEMINI
 ```
 
 For freelance pool agents (no project context), skip adapter writing -- adapters are written only when the agent is contracted to a project.
+
+After writing adapters for the primary project, also update adapters in additional project roots where this agent has a presence:
+
+1. Read the canonical agent file. Extract `secondary_teams` and `hired_by_teams` arrays.
+2. For each team name in `secondary_teams` (permanent employees) or `hired_by_teams` (freelance employees):
+   a. Resolve the project root from `$PROJECTS_INDEX` using the team name.
+   b. If no project root found, skip this team (warn but continue).
+   c. Detect installed harnesses under that project root.
+   d. For each detected harness, write the adapter using the same format as above, with the canonical path pointing to `$TEAM_AGENTS/<name>.md` (for project-scoped) or `$AGENTS_GLOBAL/<name>.md` (for freelance).
+3. Include all additional adapter paths in the diff and audit log.
 
 ### 9. Rebuild indexes
 

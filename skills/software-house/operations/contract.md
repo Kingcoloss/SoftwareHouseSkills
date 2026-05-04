@@ -6,7 +6,7 @@
 
 ## Purpose
 
-Contract a freelance/outsource agent to a specific project team. The agent's canonical file must have `employment: freelance` and `status: active` or `status: freelance`. This operation writes harness adapters in the target project's directories (first time the freelance agent gets adapters for this project), adds the agent to the team's roster with a `(contract)` marker, and updates the agent's `hired_by_teams` list and status. If the agent already has adapters for the target project, the operation refuses (suggest `show` to inspect).
+Contract a freelance/outsource agent to a specific project team. The agent's canonical file must have `employment: freelance` and `status: active` or `status: freelance`. This operation writes harness adapters in the target project's directories (first time the freelance agent gets adapters for this project), adds the agent to the team's `contractors` list, and updates the agent's `hired_by_teams` list and status. If the agent already has adapters for the target project, the operation refuses (suggest `show` to inspect).
 
 ## Invocation patterns
 
@@ -67,7 +67,7 @@ File: $WIKI_PEOPLE/<name>.md (frontmatter)
   CREATE: $WIKI_PEOPLE/<name>.md
 
 File: $WIKI_TEAMS/<team>.md (frontmatter)
-  members list: add <name> (contract)
+  contractors list: add <name>
 
 Adapters to WRITE (target project):
   <list each adapter path, one per line, or "(none detected)">
@@ -126,9 +126,9 @@ Briefing not yet written. Run `/software-house onboard <name>` to generate.
 (empty)
 ```
 
-### 7. Add agent to team roster with contract marker
+### 7. Add agent to team contractors list
 
-Read `$WIKI_TEAMS/<team>.md`. Append `<name> (contract)` to the `members` list in the frontmatter. Update `updated_at: <utc-date>` field. Write atomically per `_shared.md §6`.
+Read `$WIKI_TEAMS/<team>.md`. Append `<name>` to the `contractors` list in the frontmatter. Update `updated_at: <utc-date>` field. Write atomically per `_shared.md §6`.
 
 ### 8. Write adapters in target project
 
@@ -212,7 +212,7 @@ Rebuild `$TEAM_INDEX` for the target project and `$COMPANY_INDEX` per `_shared.m
 Contracted <name> to team <team>
   Canonical:    $AGENTS_GLOBAL/<name>.md
   Wiki:         $WIKI_PEOPLE/<name>.md
-  Team roster:  <team> (contract)
+  Team roster:  <team> (contractor)
   Adapters:     <list or "none detected">
   Status:       active (contract)
 

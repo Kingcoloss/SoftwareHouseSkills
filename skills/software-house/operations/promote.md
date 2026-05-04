@@ -66,20 +66,20 @@ Build the modification plan:
 ```
 File: <canonical agent file> (frontmatter)
   field level: <old-level> -> <new-level>
+  field promotion_at: <absent | old-value> -> <utc-date YYYY-MM-DD>
+  field promotion_from_level: <absent | old-value> -> <old-level>
   <If --to-role given:>
   field role: <old-role> -> <new-role>
   field position: <old-position> -> <new-role-label>
-  field promotion_at: <absent> -> <utc-date YYYY-MM-DD>
-  field promotion_from_level: <absent> -> <old-level>
   field updated_at: <old-value | "absent"> -> <utc-date YYYY-MM-DD>
 
 File: $WIKI_PEOPLE/<name>.md (frontmatter)
   field level: <old-level> -> <new-level>
+  field promotion_at: <absent | old-value> -> <utc-date YYYY-MM-DD>
+  field promotion_from_level: <absent | old-value> -> <old-level>
   <If --to-role given:>
   field role: <old-role> -> <new-role>
   field position: <old-position> -> <new-role-label>
-  field promotion_at: <absent> -> <utc-date YYYY-MM-DD>
-  field promotion_from_level: <absent> -> <old-level>
 
 <If provider/model mismatch:>
   Warning: role defaults differ from current provider/model (see above)

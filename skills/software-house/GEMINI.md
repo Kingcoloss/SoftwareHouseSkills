@@ -81,9 +81,38 @@ The user invokes `/software-house <command> [args]`. Match the command and read 
 | `org-chart [team]`   | `operations/org-chart.md`   |
 | `lint`               | `operations/lint.md`        |
 
-### Phase 2-4 (planned)
+### Phase 2 -- Recruitment
 
-`hire`, `onboard`, `fire`, `dept create`, `dept assign` (Phase 2); `transfer`, `second`, `promote`, `demote`, `outsource hire`, `contract`, `set-model` (Phase 3); `okr set`, `okr review`, `award-xp`, `dashboard` (Phase 4).
+| Pattern | Operation file |
+|---|---|
+| `hire <name> --role <role> [--provider <p>] [--model <m>] [--effort <e>] [--dept <d>] [--pool]` | `operations/hire.md` |
+| `onboard <name> [--team <t>] [--pool]` | `operations/onboard.md` |
+| `fire <name> [--team <t>] [--pool]` | `operations/fire.md` |
+| `dept create <name> [--parent <dept>] [--charter "<text>"] [--charter-from <path>] [--force]` | `operations/dept-create.md` |
+| `dept assign <agent> <dept> [--team <t>] [--pool]` | `operations/dept-assign.md` |
+
+### Phase 3 -- Mobility & Outsource
+
+| Pattern | Operation file |
+|---|---|
+| `transfer <name> --to <team> [--team <current>]` | `operations/transfer.md` |
+| `second <name> --to <team>` | `operations/second.md` |
+| `promote <name> [--by N] [--to-role <role>]` | `operations/promote.md` |
+| `demote <name> [--by N] [--to-role <role>]` | `operations/demote.md` |
+| `set-model <name> [--provider <p>] [--model <m>] [--effort <e>]` | `operations/set-model.md` |
+| `outsource hire <name> --role <role> [--provider <p>] [--model <m>] [--contract-type <type>] [--contract-end <date>]` | `operations/outsource-hire.md` |
+| `contract <name> --team <team>` | `operations/contract.md` |
+| `off-board <name> [--team <t>] [--pool]` | `operations/off-board.md` |
+| `disband <team>` | `operations/disband.md` |
+
+### Phase 4 -- OKR & Gamification
+
+| Pattern | Operation file |
+|---|---|
+| `okr set --tier <company|dept|team> --quarter <YYYY-QN> --objective "<text>" --kr "<text> (target: <val>)" [--owner <name>] [--replace]` | `operations/okr-set.md` |
+| `okr review [--tier <company|dept|team>] [--quarter <YYYY-QN>] [--dept <name>] [--team <name>]` | `operations/okr-review.md` |
+| `award-xp <name> --amount N [--reason "<text>"] [--achievement <name>] [--team <t>]` | `operations/award-xp.md` |
+| `dashboard [--team <t>] [--dept <d>] [--top N]` | `operations/dashboard.md` |
 
 ## Default behavior
 

@@ -36,6 +36,92 @@ name = "lint"
 description = "Check the company state for structural problems"
 risk_tier = 1
 
+# Phase 2 -- Recruitment
+
+[[command.subcommands]]
+name = "hire"
+description = "Create a new agent with provider/model/effort + egress consent gate"
+risk_tier = 2
+
+[[command.subcommands]]
+name = "onboard"
+description = "Run onboarding checklist for a new agent"
+risk_tier = 2
+
+[[command.subcommands]]
+name = "fire"
+description = "Remove an agent (two-step typed CONFIRM, archive not delete)"
+risk_tier = 4
+
+[[command.subcommands]]
+name = "dept"
+description = "Department operations: create, assign"
+risk_tier = 2
+
+# Phase 3 -- Mobility & Outsource
+
+[[command.subcommands]]
+name = "transfer"
+description = "Transfer an agent to another team"
+risk_tier = 3
+
+[[command.subcommands]]
+name = "second"
+description = "Matrix-assign an agent to a second team"
+risk_tier = 3
+
+[[command.subcommands]]
+name = "promote"
+description = "Increase an agent's level and optionally change role"
+risk_tier = 3
+
+[[command.subcommands]]
+name = "demote"
+description = "Decrease an agent's level and optionally change role"
+risk_tier = 3
+
+[[command.subcommands]]
+name = "set-model"
+description = "Change agent's provider/model/effort (egress re-consent if external)"
+risk_tier = 3
+
+[[command.subcommands]]
+name = "outsource"
+description = "Outsource operations: hire freelance agent"
+risk_tier = 2
+
+[[command.subcommands]]
+name = "contract"
+description = "Contract a freelance agent to a project team"
+risk_tier = 3
+
+[[command.subcommands]]
+name = "off-board"
+description = "Run off-boarding checklist before removal"
+risk_tier = 3
+
+[[command.subcommands]]
+name = "disband"
+description = "Remove an entire team (two-step typed CONFIRM)"
+risk_tier = 4
+
+# Phase 4 -- OKR & Gamification
+
+[[command.subcommands]]
+name = "okr"
+description = "OKR operations: set, review"
+risk_tier = 2
+
+[[command.subcommands]]
+name = "award-xp"
+description = "Grant XP and trigger level/achievement checks"
+risk_tier = 3
+
+[[command.subcommands]]
+name = "dashboard"
+description = "Show gamification stats and skill-tree state"
+risk_tier = 1
+
 # Reading order on first invocation:
 #   1. policies/privacy.md
 #   2. policies/safety.md

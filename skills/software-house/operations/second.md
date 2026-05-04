@@ -6,7 +6,7 @@
 
 ## Purpose
 
-Add a secondary team assignment to an agent (matrix management). The agent keeps their primary team and gains an additional team assignment. For permanent employees, a `secondary_teams` list is added or appended to in the canonical frontmatter. For freelance employees, the team is appended to `hired_by_teams`. Adapters are written in the secondary team's project directory for all detected harnesses. The agent is added to the secondary team's roster with a `(seconded)` marker.
+Add a secondary team assignment to an agent (matrix management). The agent keeps their primary team and gains an additional team assignment. For permanent employees, a `secondary_teams` list is added or appended to in the canonical frontmatter. For freelance employees, the team is appended to `hired_by_teams`. Adapters are written in the secondary team's project directory for all detected harnesses. The agent is added to the secondary team's `seconded` list.
 
 ## Invocation patterns
 
@@ -72,7 +72,7 @@ File: $WIKI_PEOPLE/<name>.md (frontmatter)
     field hired_by_teams: [<existing..., <team>]
 
 File: $WIKI_TEAMS/<team>.md (frontmatter)
-  members list: add <name> (seconded)
+  seconded list: add <name>
 
 Adapters to WRITE (secondary team project):
   <list each adapter path, one per line, or "(none detected)">
@@ -109,9 +109,9 @@ For freelance employees:
 
 If `$WIKI_PEOPLE/<name>.md` exists, update the same frontmatter fields as Step 5 (mirroring canonical agent file). Use atomic write per `_shared.md §6`.
 
-### 7. Add agent to secondary team roster
+### 7. Add agent to team seconded list
 
-Read `$WIKI_TEAMS/<team>.md`. Append `<name> (seconded)` to the `members` list in the frontmatter. Update `updated_at: <utc-date>` field. Write atomically per `_shared.md §6`.
+Read `$WIKI_TEAMS/<team>.md`. Append `<name>` to the `seconded` list in the frontmatter. Update `updated_at: <utc-date>` field. Write atomically per `_shared.md §6`.
 
 ### 8. Write adapters in secondary team project
 

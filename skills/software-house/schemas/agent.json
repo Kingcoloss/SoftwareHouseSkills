@@ -142,6 +142,30 @@
       },
       "description": "List of team names that hired this freelance agent. Empty for permanent."
     },
+    "secondary_teams": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "List of secondary team names for matrix assignment. Empty for non-seconded agents."
+    },
+    "contract_type": {
+      "type": ["string", "null"],
+      "enum": ["retainer", "hourly", "project", null],
+      "description": "Contract type for freelance agents. null for permanent."
+    },
+    "contract_start": {
+      "type": ["string", "null"],
+      "format": "date",
+      "description": "Contract start date (YYYY-MM-DD). null for permanent or if not set."
+    },
+    "contract_end": {
+      "type": ["string", "null"],
+      "format": "date",
+      "description": "Contract end date (YYYY-MM-DD). null for open-ended or permanent."
+    },
+    "rate": {
+      "type": ["string", "null"],
+      "description": "Rate string for freelance agents. null for permanent."
+    },
     "achievements": {
       "type": "array",
       "items": {
@@ -158,6 +182,36 @@
       "type": "string",
       "enum": ["done"],
       "description": "Onboarding completion status. Optional; only value is 'done'."
+    },
+    "offboard_at": {
+      "type": ["string", "null"],
+      "format": "date",
+      "description": "ISO-8601 date (YYYY-MM-DD) when off-boarding was completed. Optional."
+    },
+    "offboard_status": {
+      "type": ["string", "null"],
+      "enum": ["pending", "done", null],
+      "description": "Off-boarding status. Optional; values are 'pending' or 'done'."
+    },
+    "promotion_at": {
+      "type": ["string", "null"],
+      "format": "date",
+      "description": "ISO-8601 date (YYYY-MM-DD) of last promotion. Optional."
+    },
+    "promotion_from_level": {
+      "type": ["integer", "null"],
+      "minimum": 1,
+      "description": "Level before last promotion. Optional."
+    },
+    "demotion_at": {
+      "type": ["string", "null"],
+      "format": "date",
+      "description": "ISO-8601 date (YYYY-MM-DD) of last demotion. Optional."
+    },
+    "demotion_from_level": {
+      "type": ["integer", "null"],
+      "minimum": 1,
+      "description": "Level before last demotion. Optional."
     },
     "fired_at": {
       "type": "string",

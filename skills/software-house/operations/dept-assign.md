@@ -68,6 +68,7 @@ Build the modification plan:
 ```
 File: <canonical agent file> (frontmatter)
   field department: <from_dept | "null"> -> <dept-name>
+  field updated_at: <old-value | "absent"> -> <utc-date YYYY-MM-DD>
 
 File: $DEPARTMENTS_HOME/<dept-name>/agents/index.md
   + <agent-name> | <role> | <provider> | active

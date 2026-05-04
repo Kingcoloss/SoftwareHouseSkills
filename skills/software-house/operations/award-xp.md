@@ -1,6 +1,6 @@
 # Operation: award-xp -- grant XP and trigger level checks
 
-**Risk tier:** 2 (additive -- updates agent frontmatter xp and possibly level)
+**Risk tier:** 3 (modifying -- updates agent frontmatter xp, level, achievements, and team stats)
 
 **Required reading first:** `policies/privacy.md`, `policies/safety.md`, `operations/_shared.md`
 
@@ -52,7 +52,7 @@ Suggested XP award values (configurable via `$MODELS_CONFIG` if extended):
 
 1. `$COMPANY_HOME` exists (company is initialized). If not, refuse: `Error: company not initialized. Run /software-house init first.`
 2. The canonical agent file for `<name>` must exist at `$TEAM_AGENTS/<name>.md` (project scope) or `$AGENTS_GLOBAL/<name>.md` (freelance pool). If not, refuse: `Error: agent <name> not found. Run /software-house list people to see available agents.`
-3. The agent must have `status: active`. If `status: onboarding`, `transfer`, `alumni`, or `freelance`, refuse: `Error: agent <name> has status '<status>'. Only active agents can receive XP.`
+3. The agent must have `status: active` or `status: freelance`. If `status: onboarding`, `transfer`, or `alumni`, refuse: `Error: agent <name> has status '<status>'. Only active or freelance agents can receive XP.`
 
 ## Step-by-step protocol
 
@@ -75,7 +75,7 @@ Locate the canonical agent file:
 
 Read the canonical agent file. Parse frontmatter. Extract: `xp`, `level`, `achievements`, `team`, `status`.
 
-If `status` is not `active`, refuse per Precondition 3.
+If `status` is not `active` and not `freelance`, refuse per Precondition 3.
 
 ### 3. Compute new XP and level
 
@@ -108,7 +108,7 @@ If `--achievement` is given, check whether the achievement string already exists
 - If it already exists, warn but continue: `Note: achievement '<name>' already exists for <agent>. It will not be duplicated.`
 - If it does not exist, it will be added in Step 7.
 
-### 5. Tier-2 confirmation
+### 5. Tier-3 confirmation
 
 Build the list of changes:
 
@@ -128,7 +128,7 @@ Print the Tier-2 prompt from `safety.md §3`:
 
 ```
 +----------------------------------------------------------+
-| I will create the new files listed above.                |
+| I will apply the diff above to existing files.           |
 | Reply 'yes' to proceed, or anything else to cancel.      |
 +----------------------------------------------------------+
 ```
@@ -189,7 +189,7 @@ If no team context, skip this step.
 ### 9. Append audit log entry
 
 ```json
-{"ts":"<utc>","actor":"user","op":"award-xp","scope":"agent:<name>","args":{"name":"<name>","amount":<amount>,"reason":"<reason|null>","achievement":"<achievement|null>","team":"<team|null>"},"diff":{"updated":["<canonical agent file>","$WIKI_PEOPLE/<name>.md","$WIKI_TEAMS/<team>.md"]},"confirmation":{"tier":2,"prompt":"<exact box text>","response":"<user verbatim>","ts":"<utc>"},"egress_consent":{"required":false},"result":"ok"}
+{"ts":"<utc>","actor":"user","op":"award-xp","scope":"agent:<name>","args":{"name":"<name>","amount":<amount>,"reason":"<reason|null>","achievement":"<achievement|null>","team":"<team|null>"},"diff":{"updated":["<canonical agent file>","$WIKI_PEOPLE/<name>.md","$WIKI_TEAMS/<team>.md"]},"confirmation":{"tier":3,"prompt":"<exact box text>","response":"<user verbatim>","ts":"<utc>"},"egress_consent":{"required":false},"result":"ok"}
 ```
 
 Omit `$WIKI_PEOPLE/<name>.md` from `diff.updated` if it was skipped. Omit `$WIKI_TEAMS/<team>.md` if no team context.
@@ -224,7 +224,7 @@ Next steps:
 ## Failure modes
 
 - Agent not found -> refuse before any confirmation gate; no log.
-- Agent status not `active` -> refuse; no log.
+- Agent status not `active` or `freelance` -> refuse; no log.
 - `--amount` is zero or negative -> refuse; no log.
 - Achievement name invalid -> refuse; no log.
 - Achievement already exists -> warn but continue (no duplicate added).

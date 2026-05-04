@@ -19,7 +19,22 @@ classification: internal
 buddy: null
 employment: permanent
 hired_by_teams: []
+secondary_teams: []
+contract_type: null
+contract_start: null
+contract_end: null
+rate: null
 achievements: []
+onboard_at: null
+onboard_status: null
+offboard_at: null
+offboard_status: null
+promotion_at: null
+promotion_from_level: null
+demotion_at: null
+demotion_from_level: null
+fired_at: null
+updated_at: null
 ---
 
 # <name>

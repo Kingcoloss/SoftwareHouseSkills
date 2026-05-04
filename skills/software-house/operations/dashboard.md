@@ -146,14 +146,47 @@ Sort by `team_xp` descending.
 
 If scoped to a single team (`--team`), skip this section and instead show the team's own stats in the header.
 
-### 8. Collect at-risk OKRs
+### 8. Collect at-risk OKRs (computed from KR progress)
 
 Glob for OKR files:
 - `$COMPANY_HOME/okrs/*.md`
 - `$DEPARTMENTS_HOME/*/okrs/*.md`
 - For each project in `$PROJECTS_INDEX`: `<project>/.software-house/team/okrs/*.md`
 
-Read each OKR file. Parse objectives and key results. Identify objectives with status `at-risk` or `off-track`.
+Read each OKR file. For each objective section (marked by `## Objective N: <title>`), parse
+all key result lines. KR lines follow the format:
+
+```
+- [ ] KR N.M: <key result text> (target: <value>, current: <value>)
+```
+
+or the checked-off form:
+
+```
+- [x] KR N.M: <key result text> (target: <value>, current: <value>)
+```
+
+For each KR, extract the `target` and `current` values from the `(target: <value>, current: <value>)`
+parenthetical. Compute KR progress:
+
+- If both `current` and `target` are numeric and target > 0: `progress = (current / target) * 100`,
+  capped at 100%.
+- If either value is non-numeric or target is 0: mark progress as `N/A` and exclude from
+  objective status calculation.
+
+For each objective, compute overall progress as the average of all numeric KR progress values
+(excluding N/A entries). Round to the nearest integer. Then determine objective status:
+
+- **on-track**: overall progress >= 70%.
+- **off-track**: overall progress < 40%, OR two or more KRs each below 40% progress.
+- **at-risk**: overall progress >= 40% and < 70%, OR any single KR is below 40% while others
+  are on-track.
+
+This computation matches the logic in `okr-review.md` Step 4. Do NOT read the `**Status:**` line
+from the OKR file -- that line is set to `on-track` at creation time by `okr-set.md` and is not
+updated by any persistent operation. The true status must be computed from KR progress values.
+
+Filter for objectives with at-risk or off-track status.
 
 ```
 At-Risk OKRs
