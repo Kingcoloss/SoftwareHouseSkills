@@ -1,0 +1,91 @@
+schema_version: 1
+name: software-house
+version: 0.1.0
+description: >
+  Turn the user's computer into a managed software house: projects with
+  CLAUDE.md (or AGENTS.md, GEMINI.md) are teams, subagents are employees,
+  and the user is the CEO. Provides HR operations (hire, fire, transfer,
+  promote, demote, onboard, off-board), a four-tier org hierarchy
+  (Company -> Department -> Team -> Role), per-tier LLM-Wiki memory, OKR
+  cascade, gamification (XP, achievements, skill tree), and per-role
+  provider+model+effort selection. Works identically across Claude Code,
+  OpenAI Codex CLI, and Gemini CLI -- canonical state under
+  ~/.software-house/, harness-specific entry points. Agents may use any
+  of 25 supported providers (local-first; external providers require
+  typed egress consent). The skill itself is entirely local and never
+  sends data off the machine.
+license: MIT
+author: kanganapong sriduang
+
+# Critical constraints (mirrors SKILL.md C1-C4) -- kept here for harness-neutral consumption
+constraints:
+  - id: C1
+    name: skill-local-only
+    summary: Skill operations never send data off the machine
+  - id: C2
+    name: agent-runtime-egress-with-consent
+    summary: External-provider agents require typed EGRESS-CONSENT-<provider> token
+  - id: C3
+    name: destructive-ops-need-typed-confirm
+    summary: Tier-4 ops require typed CONFIRM <subject> token, even with bypass flags
+  - id: C4
+    name: audit-log-append-only
+    summary: Every state-modifying op writes one JSONL line to ~/.software-house/company/audit.log
+
+state:
+  canonical_root: ~/.software-house
+  config_dir: ~/.software-house/config
+  audit_log: ~/.software-house/company/audit.log
+  projects_index: ~/.software-house/projects-index.json
+
+# Harness install locations -- install.sh detects which are present
+harnesses:
+  - id: claude-code
+    install_path: ~/.claude/skills/software-house
+    detect: ~/.claude
+    entry_point: SKILL.md
+    adapter_doc: adapters/claude-code.md
+  - id: codex
+    install_path: ~/.agents/skills/software-house
+    detect_any_of: [~/.codex, ~/.agents]
+    entry_point: SKILL.md
+    extra: agents/openai.yaml
+    adapter_doc: adapters/codex.md
+  - id: gemini
+    install_path: ~/.gemini/extensions/software-house
+    detect: ~/.gemini
+    entry_point: gemini-extension.json
+    extra: [GEMINI.md, commands]
+    adapter_doc: adapters/gemini.md
+
+# Portable tools the operation files rely on (every harness must provide these)
+required_tools:
+  - Read
+  - Write
+  - Edit
+  - Glob
+  - Grep
+  - Bash    # subject to allowlist/denylist in policies/privacy.md
+
+# Optional UX enhancements (used if available; not required)
+optional_tools:
+  - AskUserQuestion  # Claude Code; falls back to text-prompt protocol per safety.md
+  - confirm          # Codex equivalent; same fallback
+
+# Operations declared by this skill (Phase 1 only; later phases extend this list)
+operations:
+  - {name: init,      file: operations/init.md,      tier: 2}
+  - {name: list,      file: operations/list.md,      tier: 1}
+  - {name: show,      file: operations/show.md,      tier: 1}
+  - {name: org-chart, file: operations/org-chart.md, tier: 1}
+  - {name: lint,      file: operations/lint.md,      tier: 1}
+
+# Provider awareness -- pointer to the catalog the skill loads
+providers_catalog: config/providers.json
+models_config: config/models-config.json
+
+# Reading order for the assistant on first invocation per session
+required_reading_order:
+  - policies/privacy.md
+  - policies/safety.md
+  - operations/_shared.md

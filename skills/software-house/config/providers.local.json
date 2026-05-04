@@ -1,0 +1,5 @@
+{
+  "version": 1,
+  "_comment": "User overlay for providers.json. Values here override or extend the skill-managed providers.json. This file is NEVER overwritten by install.sh -- add custom providers or override defaults here.",
+  "providers": {}
+}

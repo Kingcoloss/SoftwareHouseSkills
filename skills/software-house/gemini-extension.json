@@ -1,0 +1,8 @@
+{
+  "name": "software-house",
+  "version": "0.1.0",
+  "description": "Run the user's computer like a software house company: HR-style management of subagents-as-employees, multi-provider, local-first, with typed consent for external-provider egress.",
+  "contextFileName": "GEMINI.md",
+  "mcpServers": {},
+  "excludeTools": []
+}
