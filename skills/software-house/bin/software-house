@@ -1,0 +1,240 @@
+#!/usr/bin/env bash
+# software-house -- CLI entry point for the software-house skill
+# Routes subcommands to operation modules in lib/operations/
+# See SKILL.md for the full routing table and invocation patterns.
+
+set -euo pipefail
+
+# Resolve script directory and source shared library
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+SKILL_SRC="$(cd "$SCRIPT_DIR/.." && pwd)"
+LIB_DIR="$SKILL_SRC/lib"
+# CLI operations dir is the .sh modules, not the .md specs
+CLI_OPERATIONS_DIR="$LIB_DIR/operations"
+
+source "$LIB_DIR/_shared.sh"
+# Restore CLI operations dir (overridden by _shared.sh to point at .md specs)
+OPERATIONS_DIR="$CLI_OPERATIONS_DIR"
+
+# ---------------------------------------------------------------------------
+# Version
+# ---------------------------------------------------------------------------
+VERSION=""
+if [[ -f "$SKILL_SRC/VERSION" ]]; then
+  VERSION="$(cat "$SKILL_SRC/VERSION" | tr -d '[:space:]')"
+else
+  VERSION="0.0.0-unknown"
+fi
+
+# ---------------------------------------------------------------------------
+# Global flags
+# ---------------------------------------------------------------------------
+DRY_RUN=0
+
+# ---------------------------------------------------------------------------
+# Usage / help
+# ---------------------------------------------------------------------------
+show_help() {
+  cat <<'HELPEOF'
+software-house - Run your computer like a software house company.
+
+Usage: software-house <command> [args] [options]
+
+Commands:
+
+  init              Bootstrap company state at ~/.software-house/
+  list              List people, teams, departments, or the freelance pool
+  show              Display one entity (employee, team, department) in detail
+  org-chart         Render an ASCII tree of the company hierarchy
+  lint              Check the company state for structural problems
+
+  hire              Create a new agent with provider/model/effort
+  onboard           Run onboarding checklist for a new agent
+  fire              Remove an agent (two-step typed CONFIRM)
+  dept-create       Create a new department
+  dept-assign       Assign an agent to a department
+
+  transfer          Transfer an agent to another team
+  second            Matrix-assign an agent to a second team
+  promote           Increase an agent's level and optionally change role
+  demote            Decrease an agent's level and optionally change role
+  set-model         Change agent provider/model/effort
+  outsource-hire    Add an agent to the freelance pool
+  contract          Attach a freelance agent to a project
+  off-board         Run off-boarding checklist before removal
+  disband           Remove an entire team (two-step typed CONFIRM)
+
+  okr-set           Set OKRs at company, department, or team tier
+  okr-review        Review OKR progress
+  award-xp          Grant XP and trigger level/achievement checks
+  dashboard         Show gamification stats and skill-tree state
+
+Options:
+  --help            Show this help message
+  --version         Show version
+  --dry-run         Show what would be done without making changes
+
+Critical constraints (read SKILL.md for full details):
+  C1. Skill operations never send data off the machine.
+  C2. Agents using external providers require typed EGRESS-CONSENT-<provider>.
+  C3. Destructive operations require explicit confirmation (two-step for Tier 4).
+  C4. Every state-modifying operation appends to the audit log.
+HELPEOF
+}
+
+show_version() {
+  printf 'software-house %s\n' "$VERSION"
+}
+
+# ---------------------------------------------------------------------------
+# Command dispatch table
+# ---------------------------------------------------------------------------
+# Maps subcommand names to operation script basenames.
+# Compound commands like "dept create" map to "dept-create".
+# "okr set" maps to "okr-set", "okr review" maps to "okr-review".
+# "outsource hire" maps to "outsource-hire".
+
+# Resolve command to operation script basename using a function
+# (avoids declare -A + set -u interaction issues on some bash versions)
+resolve_command() {
+  case "$1" in
+    init)           echo "init" ;;
+    list)           echo "list" ;;
+    show)           echo "show" ;;
+    org-chart)      echo "org-chart" ;;
+    lint)           echo "lint" ;;
+    hire)           echo "hire" ;;
+    onboard)        echo "onboard" ;;
+    fire)           echo "fire" ;;
+    dept-create)    echo "dept-create" ;;
+    dept-assign)    echo "dept-assign" ;;
+    transfer)       echo "transfer" ;;
+    second)         echo "second" ;;
+    promote)        echo "promote" ;;
+    demote)         echo "demote" ;;
+    set-model)      echo "set-model" ;;
+    outsource-hire) echo "outsource-hire" ;;
+    contract)       echo "contract" ;;
+    off-board)      echo "off-board" ;;
+    disband)        echo "disband" ;;
+    okr-set)        echo "okr-set" ;;
+    okr-review)     echo "okr-review" ;;
+    award-xp)       echo "award-xp" ;;
+    dashboard)      echo "dashboard" ;;
+    *)              echo "" ;;
+  esac
+}
+
+# ---------------------------------------------------------------------------
+# Main dispatch
+# ---------------------------------------------------------------------------
+main() {
+  # Parse global flags that appear before the subcommand.
+  # Once a non-flag argument is found, stop consuming global flags
+  # and pass everything else through to the subcommand.
+  local args=()
+  local subcommand_found=false
+  while (( $# > 0 )); do
+    if ! $subcommand_found; then
+      case "$1" in
+        --help|-h)
+          show_help
+          exit 0
+          ;;
+        --version|-V)
+          show_version
+          exit 0
+          ;;
+        --dry-run)
+          DRY_RUN=1
+          shift
+          ;;
+        --)
+          shift
+          args+=("$@")
+          break
+          ;;
+        -*)
+          # Unknown global flag -- pass through
+          args+=("$1")
+          shift
+          ;;
+        *)
+          # First non-flag argument = subcommand
+          subcommand_found=true
+          args+=("$1")
+          shift
+          ;;
+      esac
+    else
+      args+=("$1")
+      shift
+    fi
+  done
+
+  set -- "${args[@]}"
+
+  # No command: show help
+  if (( $# == 0 )); then
+    show_help
+    exit 0
+  fi
+
+  local cmd="$1"
+  shift
+
+  # Handle compound commands (dept create, dept assign, okr set, okr review, outsource hire)
+  case "$cmd" in
+    dept)
+      if (( $# > 0 )) && [[ "$1" != --* ]]; then
+        local sub="$1"; shift
+        cmd="dept-${sub}"
+      fi
+      ;;
+    okr)
+      if (( $# > 0 )) && [[ "$1" != --* ]]; then
+        local sub="$1"; shift
+        cmd="okr-${sub}"
+      fi
+      ;;
+    outsource)
+      if (( $# > 0 )) && [[ "$1" != --* ]]; then
+        local sub="$1"; shift
+        cmd="outsource-${sub}"
+      fi
+      ;;
+  esac
+
+  # Look up the operation script
+  local op_script
+  op_script="$(resolve_command "$cmd")"
+
+  if [[ -z "$op_script" ]]; then
+    printf 'Error: unknown command "%s". Run software-house --help for usage.\n' "$cmd" >&2
+    exit 1
+  fi
+
+  # Check if the operation module exists
+  local op_file="$OPERATIONS_DIR/${op_script}.sh"
+  if [[ ! -f "$op_file" ]]; then
+    printf 'Error: operation "%s" is not yet implemented.\n' "$cmd" >&2
+    printf 'The spec exists at operations/%s.md but no executable code is available.\n' "$op_script" >&2
+    exit 1
+  fi
+
+  # Source the operation module and run it
+  source "$op_file"
+
+  # Each operation module must define a function named "op_<operation-name>"
+  local op_func="op_${op_script//-/_}"
+
+  if ! declare -f "$op_func" &>/dev/null; then
+    printf 'Error: operation module %s.sh does not define function %s.\n' "$op_script" "$op_func" >&2
+    exit 1
+  fi
+
+  # Run the operation with remaining arguments
+  "$op_func" "$@"
+}
+
+main "$@"
