@@ -17,6 +17,7 @@ Scan the company, department, and team wikis for structural problems: orphaned e
 | `lint dept <name>` | One department |
 | `lint team <name>` | One team |
 | `lint --fix-suggestions` | Same scan, but include explicit `/software-house ...` commands the user can run to fix each finding |
+| `lint --fix-adapters` | Check for stale adapter shims and report; run `./install.sh --fix-adapters` to regenerate |
 
 ## Step-by-step
 
@@ -95,6 +96,19 @@ Each department may maintain an agent index at `$DEPARTMENTS_HOME/<dept>/agents.
 Resolution suggestions:
 - For phantom entries: run `/software-house lint --fix-suggestions` which will suggest running `/software-house dept-assign` to re-sync the index, or manually remove the phantom entry from `agents.json`.
 - For missing entries: run `/software-house dept-assign <name> --dept <dept>` to add the agent to the department index.
+
+#### 2.9 Adapter staleness
+
+Per-harness adapter shims (`$PROJECT/.claude/agents/<name>.md`, `$PROJECT/.codex/agents/<name>.md`, etc.) are written once at hire time. If the canonical agent definition changes (e.g. `model` or `description` updated via `set-model`), adapters stay stale.
+
+- An adapter shim whose `model` frontmatter field does not match the canonical agent file's `model` field → **warning** (stale adapter).
+- An adapter shim whose `description` frontmatter field does not match the canonical agent file's `description` field → **warning** (stale adapter).
+- A canonical agent file exists but no adapter shim is present in any detected harness directory → **warning** (missing adapter).
+- An adapter shim exists but its referenced canonical agent file does not exist → **error** (orphaned adapter pointing to deleted agent).
+
+Resolution:
+- Run `./install.sh --fix-adapters` from the skill source directory to regenerate all adapter shims from canonical agent files.
+- Migration scripts that modify agent frontmatter should also trigger adapter regeneration.
 
 ### 3. Render
 

@@ -1,0 +1,6 @@
+{
+  "version": 1,
+  "_comment": "User overlay for models-config.json. Values here override or extend the skill-managed models-config.json. This file is NEVER overwritten by install.sh -- add custom role defaults or override model settings here.",
+  "defaults_by_role": {},
+  "model_aliases": {}
+}

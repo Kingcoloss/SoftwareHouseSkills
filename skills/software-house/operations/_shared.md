@@ -27,6 +27,8 @@ Use these names verbatim throughout operation files:
 | `$CONFIG_HOME` | `~/.software-house/config` |
 | `$PROVIDERS_CONFIG` | `~/.software-house/config/providers.json` |
 | `$MODELS_CONFIG` | `~/.software-house/config/models-config.json` |
+| `$PROVIDERS_LOCAL` | `~/.software-house/config/providers.local.json` (user overlay, never overwritten) |
+| `$MODELS_LOCAL` | `~/.software-house/config/models-config.local.json` (user overlay, never overwritten) |
 
 Per-project (team-scoped), given the current project root `$PROJECT`:
 
@@ -156,6 +158,8 @@ department: <dept-name | null>
 project_path: <absolute path | null>
 lead: <employee-name>
 members: [name1, name2]
+contractors: []                          # freelance agents contracted to this team
+seconded: []                             # agents matrix-assigned from other teams
 status: active                          # active | disbanded
 team_xp: 0
 team_level: 1
@@ -171,6 +175,7 @@ created_at: 2026-05-02
 name: <dept-name>
 description: <one-line>
 head: <employee-name>
+parent: <dept-name | null>
 teams: [team1, team2]
 status: active
 classification: internal
@@ -219,3 +224,44 @@ If a request would violate `policies/privacy.md` or `policies/safety.md`:
 1. Refuse explicitly: `Refused: <which policy and why>`.
 2. Suggest an alternative if there is one.
 3. Do not log a failed operation (audit log records executions, not refusals).
+
+## 13. Config overlay pattern
+
+Config files under `$CONFIG_HOME` follow a two-layer pattern:
+
+- **Skill-managed files** (`providers.json`, `models-config.json`) are overwritten on each `install.sh` run. They ship with the skill and contain baseline defaults.
+- **User overlay files** (`*.local.json`, e.g. `providers.local.json`, `models-config.local.json`) are NEVER overwritten by `install.sh`. The user adds custom providers, role defaults, or model aliases here.
+
+When reading config, merge the base file with the `.local.json` overlay if it exists. The overlay's keys override or extend the base. If a key exists in both, the overlay wins.
+
+Overlay files are empty stubs by default:
+
+```json
+{
+  "version": 1,
+  "_comment": "User overlay -- never overwritten by install.sh",
+  "providers": {}
+}
+```
+
+Operations that modify config (e.g. `hire` adding a custom provider) should prefer writing to the `.local.json` overlay to preserve changes across updates.
+
+## 14. Adapter re-sync
+
+Adapter shims (per section 3) are generated once at hire time and stay stale if the canonical agent definition changes. To regenerate all adapter shims from canonical:
+
+- Run `./install.sh --fix-adapters` from the skill source directory.
+- This scans `$AGENTS_GLOBAL` and per-project `$TEAM_AGENTS` directories and regenerates adapter shims in all detected harness locations.
+- Migration scripts may also invoke adapter regeneration when they modify agent frontmatter schema.
+
+The `lint` operation (section 2 of `lint.md`) should flag stale adapters where the adapter's `model` or `description` does not match the canonical agent's current frontmatter. Use `--fix-adapters` to resolve these findings.
+
+## 15. Version and migration
+
+The skill ships a `VERSION` file containing the current semver (e.g. `0.4.0`). `install.sh` reads this and compares against the installed version:
+
+- **Same version**: prompts to confirm re-install (or skips with `--force`).
+- **Upgrade**: shows CHANGELOG entries between versions, runs pending migrations, then installs.
+- **Downgrade**: warns and requires confirmation before proceeding.
+
+Migrations are shell scripts in `migrations/NNN-<name>.sh`, run in sort order on version change. See `migrations/README.md` for the migration contract.
