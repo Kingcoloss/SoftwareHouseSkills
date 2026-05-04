@@ -41,9 +41,6 @@ Operation specs written and wired into SKILL.md routing table.
 ## Cross-cutting / future
 
 - Cross-machine sync (deferred -- design uses files so git-trackable later)
-- Freelance pool agents do not get adapters at hire; trigger adapter generation on future `transfer` (flagged by Track B during Phase 2 design)
-- `lint` does not yet check for missing department agent indexes (flagged by Track B)
-- `fire.md` uses `rm` for adapter shims (justified as auto-generated, no unique content); revisit if a `mv`-to-temp recovery path becomes desirable
 - Reference implementation + integration tests (each operation spec is a markdown instruction set; no executable code yet)
 
 ## Update mechanism (cross-cutting; raised 2026-05-03)
@@ -85,8 +82,8 @@ Recommended new install.sh subcommand: `./install.sh --update` = source-version 
 - Phase 2 (Recruitment):
   - Operation specs: hire.md, onboard.md, fire.md, dept-create.md, dept-assign.md
   - SKILL.md routing table wired for Phase 2 commands
-  - schemas/agent.json: JSON Schema (draft-07) validating all frontmatter fields
-  - templates/agent-starter.md: starter template for new agents
+  - schemas/agent.json: JSON Schema (draft-07) validating agent frontmatter fields (completed to all _shared.md §7 fields in this commit)
+  - templates/agent-starter.md: starter template for new agents (completed to all _shared.md §7 fields in this commit)
   - templates/dept-charter.md: starter template for department charters
   - _shared.md §7: added Phase 2+ frontmatter fields (onboard_at, onboard_status, contract_type, etc.)
 - Phase 3 (Mobility & Outsource):

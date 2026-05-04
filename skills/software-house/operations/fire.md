@@ -6,7 +6,7 @@
 
 ## Purpose
 
-Remove an agent from active service. Per `safety.md §6` and `safety.md §9`, a two-step typed confirmation is required: Step 1 discloses the full impact and asks for an affirmative, Step 2 requires the literal token `CONFIRM <name>`. Files are never deleted -- the canonical agent file is moved to an archive path with a timestamp suffix. All per-harness adapters are removed. Org-chart and roster are updated. An audit line is appended including the verbatim typed token.
+Remove an agent from active service. Per `safety.md §6` and `safety.md §9`, a two-step typed confirmation is required: Step 1 discloses the full impact and asks for an affirmative, Step 2 requires the literal token `CONFIRM <name>`. Files are never deleted -- the canonical agent file is moved to an archive path with a timestamp suffix. All per-harness adapters are moved to `$SH_HOME/.trash/` with a timestamp suffix (mv-to-temp pattern) instead of being removed outright. Org-chart and roster are updated. An audit line is appended including the verbatim typed token.
 
 Bypass flags (`--dangerously-skip-permissions`, `--yolo`, etc.) do NOT bypass the Tier-4 confirmation gate. The two-step typed token is the only valid authorization path.
 
@@ -78,7 +78,7 @@ Collect any sidecar file: `<canonical-dir>/<name>.onboard.md`.
 
 Collect:
 - Files to archive (canonical, wiki page, sidecar)
-- Adapter files to remove (`rm` is allowed here because adapters are auto-generated thin shims with no unique content)
+- Adapter files to move to `$SH_HOME/.trash/` with timestamp suffix (mv-to-temp pattern, not rm)
 - Roster entries to remove (`$TEAM_ROSTER` member line)
 - Team wiki entry to update (`$WIKI_TEAMS/<team>.md`: remove from `members` list)
 - Department index to update (if `department` field is set)
@@ -113,7 +113,7 @@ Impact of firing <name>:
     <sidecar path if exists>
       -> <sidecar archive path>
 
-  ADAPTERS TO REMOVE (auto-generated, recreated by re-hire):
+  ADAPTERS TO MOVE TO TRASH (auto-generated, recoverable from $SH_HOME/.trash/):
     <list each adapter path, one per line, or "(none detected)">
 
   ROSTER UPDATES:
@@ -201,15 +201,27 @@ If `<canonical-dir>/<name>.onboard.md` exists:
 mv <canonical-dir>/<name>.onboard.md <sidecar archive path>
 ```
 
-### 9. Remove harness adapters
+### 9. Remove harness adapters (mv-to-temp pattern)
+
+Adapters are auto-generated shims with no unique content, but they may be needed for accidental-deletion recovery. Instead of immediate removal, move adapter files to a temp/trash directory with a timestamp suffix.
+
+Create the trash directory if it does not exist:
+
+```
+mkdir -p $SH_HOME/.trash/
+```
 
 For each adapter path that exists:
 
-- Claude Code adapter: `rm $PROJECT/.claude/agents/<name>.md`
-- Codex CLI adapter: `rm $PROJECT/.codex/agents/<name>.md`
-- Gemini CLI extension dir: `rm -rf $PROJECT/.gemini/extensions/<name>/`
+- Claude Code adapter: `mv $PROJECT/.claude/agents/<name>.md $SH_HOME/.trash/<name>.claude.md-<utc-timestamp>`
+- Codex CLI adapter: `mv $PROJECT/.codex/agents/<name>.md $SH_HOME/.trash/<name>.codex.md-<utc-timestamp>`
+- Gemini CLI extension dir: `mv $PROJECT/.gemini/extensions/<name>/ $SH_HOME/.trash/<name>.gemini-<utc-timestamp>/`
 
-These are auto-generated shims with no unique content. Removal is safe.
+The `<utc-timestamp>` format is `YYYYMMDDTHHMMSSZ` (same compact UTC format used for archive filenames).
+
+The `$SH_HOME/.trash/` directory can be periodically cleaned by the user. It is not managed by any operation -- the user may delete its contents at any time. Adapters in `.trash/` are no longer active and will not be picked up by any harness. Moving adapters to `.trash/` instead of removing them enables accidental-deletion recovery: if a fired agent is restored, the adapters can be moved back from `.trash/` to their original locations.
+
+**Note:** If the `$SH_HOME/.trash/` directory already contains entries for the same agent name, the timestamp suffix ensures no collision.
 
 ### 10. Update roster and team wiki
 
@@ -227,7 +239,7 @@ Rebuild `$TEAM_INDEX` and `$COMPANY_INDEX` per `_shared.md §8`.
 ### 12. Append audit log entry
 
 ```json
-{"ts":"<utc>","actor":"user","op":"fire","scope":"team:<team>","args":{"name":"<name>","team":"<team|null>","pool":<bool>},"diff":{"archived":["<canonical archive path>","<wiki archive path>","<sidecar archive path if any>"],"updated":["$TEAM_ROSTER","$WIKI_TEAMS/<team>.md","$TEAM_INDEX","$COMPANY_INDEX"],"removed":["<adapter paths>"]},"confirmation":{"tier":4,"prompt":"<exact step-1 box text>","response":"<user step-1 verbatim>","ts":"<utc-step-1>","token":"CONFIRM <name>","token_ts":"<utc-step-2>"},"egress_consent":{"required":false},"result":"ok"}
+{"ts":"<utc>","actor":"user","op":"fire","scope":"team:<team>","args":{"name":"<name>","team":"<team|null>","pool":<bool>},"diff":{"archived":["<canonical archive path>","<wiki archive path>","<sidecar archive path if any>"],"updated":["$TEAM_ROSTER","$WIKI_TEAMS/<team>.md","$TEAM_INDEX","$COMPANY_INDEX"],"trashed":["<adapter trash paths>"]},"confirmation":{"tier":4,"prompt":"<exact step-1 box text>","response":"<user step-1 verbatim>","ts":"<utc-step-1>","token":"CONFIRM <name>","token_ts":"<utc-step-2>"},"egress_consent":{"required":false},"result":"ok"}
 ```
 
 The `confirmation.token` field records the verbatim typed CONFIRM token per `safety.md §8`.
@@ -238,14 +250,18 @@ The `confirmation.token` field records the verbatim typed CONFIRM token per `saf
 Fired <name>
   Archived canonical:  <archive path>
   Archived wiki page:  $ALUMNI/<name>.md
-  Adapters removed:    <list or none>
+  Adapters trashed:   <list or none>
   Roster:              updated (removed from <team>)
   Broken refs:         <list or none -- manual fix required>
 
 To restore:
   mv '<archive path>' '<canonical path>'
   mv '$ALUMNI/<name>.md' '$WIKI_PEOPLE/<name>.md'
+  # Restore adapters from trash if needed:
+  mv '$SH_HOME/.trash/<name>.claude.md-<timestamp>' '$PROJECT/.claude/agents/<name>.md'
   /software-house onboard <name>
+
+Note: $SH_HOME/.trash/ can be periodically cleaned. Trashed adapters are not active.
 ```
 
 ## Failure modes
@@ -255,7 +271,7 @@ To restore:
 - Step-1 non-affirmative -> abort; no log; no changes.
 - Step-2 token absent or malformed -> abort; no log; no changes. The step-1 affirmative is consumed and cannot be reused; user must restart the `fire` command from the beginning.
 - `mv` failure (permissions) -> print which command failed; roll back any partial moves by reversing the `mv` commands already done; log `result: failed`.
-- `rm` failure on adapter -> log warning in audit entry but do not abort the overall operation; report the path that could not be removed.
+- `mv` failure on adapter (to trash) -> log warning in audit entry but do not abort the overall operation; report the path that could not be moved.
 
 ## Examples
 
