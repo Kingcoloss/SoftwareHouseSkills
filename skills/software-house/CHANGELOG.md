@@ -5,6 +5,28 @@ All notable changes to the software-house skill are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.0] - 2026-05-04
+
+### Added
+
+- New roles: `researcher` and `business-analyst` in models-config.json (local + external fallback)
+- Agent tool declarations: `config/tools-config.json` with canonical tool vocabulary, shared_tools, and per-role tool lists
+- Agent frontmatter `tools` field (populated at hire time from shared_tools + role_tools)
+- Agile Scrum operations: backlog-add, backlog-list, backlog-prioritize, sprint-create, sprint-plan, sprint-board, sprint-standup, sprint-review, sprint-retro
+- Sprint and backlog data structures under `<project>/.software-house/team/sprints/` and `<project>/.software-house/team/backlog.md`
+- Plan execution (auto-spawn) operations: plan-create, plan-confirm, plan-execute, plan-status, plan-synthesize
+- Plan data structures under `<project>/.software-house/team/plans/` with dependency graph and topological sort
+- Sub-agent spawning protocol: plan execute uses Claude Code Agent tool for parallel execution, manual dispatch for Codex/Gemini
+- JSON Schema for sprint, backlog-item, and plan frontmatter validation (`schemas/sprint.json`, `schemas/backlog-item.json`, `schemas/plan.json`)
+- Templates: `templates/backlog.md`, `templates/sprint.md`, `templates/plan.md`
+- Bash operation stubs for all 14 new operations (backlog-*, sprint-*, plan-*)
+- Migration 002: adds `tools` field to existing agent frontmatter
+- SKILL.md routing table updated with Phase 5 (Scrum) and Phase 6 (Plan Execution)
+- manifest.yaml updated with all operations from Phases 1-6 and tools_config reference
+- bin/software-house CLI updated with backlog, sprint, plan compound command routing
+- _shared.md sections 16-18: tools configuration, sprint/backlog data structures, plan data structures
+- _shared.sh helpers: load_tools, get_shared_tools, get_role_tools, resolve_agent_tools, next_sprint_id, next_plan_id, read_sprint, read_plan, topological_sort, spawn_subagent
+
 ## [0.4.0] - 2026-05-04
 
 ### Added

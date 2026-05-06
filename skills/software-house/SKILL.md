@@ -60,7 +60,8 @@ State lives under `~/.software-house/` (harness-neutral). The same directory is 
 │
 ├── config/
 │   ├── providers.json                  # Provider catalog with egress flags
-│   └── models-config.json              # Defaults_by_role (provider+model+effort)
+│   ├── models-config.json              # Defaults_by_role (provider+model+effort)
+│   └── tools-config.json               # Shared tools + per-role tool declarations
 │
 └── projects-index.json                 # path → team/department mapping
 
@@ -145,6 +146,30 @@ User invokes `/software-house <command> [args]`. Match the command and read the 
 | `okr review [--tier <company\|dept\|team>] [--quarter <YYYY-QN>] [--dept <name>] [--team <name>]` | `operations/okr-review.md` |
 | `award-xp <name> --amount N [--reason "<text>"] [--achievement <name>] [--team <t>]` | `operations/award-xp.md` |
 | `dashboard [--team <t>] [--dept <d>] [--top N]` | `operations/dashboard.md` |
+
+### Phase 5 -- Agile Scrum
+
+| Pattern | Operation file |
+|---|---|
+| `backlog add --title "<text>" [--description "<text>"] [--priority N] [--assignee <name>] [--story-points N] [--type bug\|feature\|task\|spike]` | `operations/backlog-add.md` |
+| `backlog list [--status open\|in-sprint\|closed\|all] [--type <type>] [--assignee <name>]` | `operations/backlog-list.md` |
+| `backlog prioritize --item <id> --priority N` | `operations/backlog-prioritize.md` |
+| `sprint create --name "<text>" --duration <N>w [--goal "<text>"] [--start-date YYYY-MM-DD]` | `operations/sprint-create.md` |
+| `sprint plan --sprint <id> --add <backlog-item-id> [--remove <id>] [--from-plan <plan-id>]` | `operations/sprint-plan.md` |
+| `sprint board [--sprint <id>]` or `sprint board --move <item-id> --to todo\|in-progress\|review\|done` | `operations/sprint-board.md` |
+| `sprint standup --sprint <id> --agent <name> --done "<text>" --doing "<text>" --blockers "<text>"` | `operations/sprint-standup.md` |
+| `sprint review --sprint <id> [--demo "<text>"] [--feedback "<text>"]` | `operations/sprint-review.md` |
+| `sprint retro --sprint <id> --went-well "<text>" --improve "<text>" --action-items "<text>"` | `operations/sprint-retro.md` |
+
+### Phase 6 -- Plan Execution (Auto-spawn)
+
+| Pattern | Operation file |
+|---|---|
+| `plan create --name "<text>" [--sprint <sprint-id>]` | `operations/plan-create.md` |
+| `plan confirm --plan <plan-id>` | `operations/plan-confirm.md` |
+| `plan execute --plan <plan-id> [--max-parallel N]` | `operations/plan-execute.md` |
+| `plan status --plan <plan-id>` | `operations/plan-status.md` |
+| `plan synthesize --plan <plan-id>` | `operations/plan-synthesize.md` |
 
 ## Default behavior
 

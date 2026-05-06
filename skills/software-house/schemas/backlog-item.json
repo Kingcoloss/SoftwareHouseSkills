@@ -1,0 +1,66 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "BacklogItem",
+  "description": "Validates a single backlog item structure within the product backlog.",
+  "type": "object",
+  "required": ["id", "title", "type", "priority", "status", "created_at"],
+  "additionalProperties": false,
+  "properties": {
+    "id": {
+      "type": "string",
+      "pattern": "^item-\\d{3}$",
+      "description": "Backlog item ID in item-NNN format."
+    },
+    "title": {
+      "type": "string",
+      "description": "Short description of the item."
+    },
+    "description": {
+      "type": ["string", "null"],
+      "description": "Detailed description. null if not set."
+    },
+    "type": {
+      "type": "string",
+      "enum": ["feature", "bug", "task", "spike"],
+      "description": "Item type."
+    },
+    "priority": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "Priority (1 = highest)."
+    },
+    "story_points": {
+      "type": ["integer", "null"],
+      "minimum": 1,
+      "description": "Story points estimate. null if not estimated."
+    },
+    "assignee": {
+      "type": ["string", "null"],
+      "description": "Agent name assigned to this item. null if unassigned."
+    },
+    "status": {
+      "type": "string",
+      "enum": ["open", "in-sprint", "in-progress", "done", "closed"],
+      "description": "Item lifecycle status."
+    },
+    "sprint_id": {
+      "type": ["string", "null"],
+      "description": "Sprint ID when pulled into a sprint. null if in backlog."
+    },
+    "board_column": {
+      "type": ["string", "null"],
+      "enum": ["todo", "in-progress", "review", "done", null],
+      "description": "Current board column. null if not in a sprint."
+    },
+    "created_at": {
+      "type": "string",
+      "format": "date",
+      "description": "Date the item was created."
+    },
+    "closed_at": {
+      "type": ["string", "null"],
+      "format": "date",
+      "description": "Date the item was closed. null if still open."
+    }
+  }
+}

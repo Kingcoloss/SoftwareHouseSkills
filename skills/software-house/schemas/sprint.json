@@ -1,0 +1,52 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "SprintFrontmatter",
+  "description": "Validates the YAML frontmatter of sprint files ($TEAM_SPRINTS/<sprint-id>/sprint.md).",
+  "type": "object",
+  "required": ["type", "id", "name", "start_date", "end_date", "status", "created_at"],
+  "additionalProperties": false,
+  "properties": {
+    "type": {
+      "type": "string",
+      "enum": ["sprint"],
+      "description": "Must be 'sprint'."
+    },
+    "id": {
+      "type": "string",
+      "pattern": "^sprint-\\d{3}$",
+      "description": "Sprint ID in sprint-NNN format."
+    },
+    "name": {
+      "type": "string",
+      "description": "Sprint name."
+    },
+    "goal": {
+      "type": ["string", "null"],
+      "description": "Sprint goal statement. null if not set."
+    },
+    "start_date": {
+      "type": "string",
+      "format": "date",
+      "description": "Sprint start date (YYYY-MM-DD)."
+    },
+    "end_date": {
+      "type": "string",
+      "format": "date",
+      "description": "Sprint end date (YYYY-MM-DD)."
+    },
+    "status": {
+      "type": "string",
+      "enum": ["planning", "active", "review", "closed"],
+      "description": "Sprint lifecycle status."
+    },
+    "plan_id": {
+      "type": ["string", "null"],
+      "description": "Optional linked plan ID (plan-NNN). null if not linked."
+    },
+    "created_at": {
+      "type": "string",
+      "format": "date",
+      "description": "Date the sprint was created."
+    }
+  }
+}

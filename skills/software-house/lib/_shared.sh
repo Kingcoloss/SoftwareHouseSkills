@@ -23,6 +23,14 @@ set -euo pipefail
 : "${CONFIG_HOME:=$SH_HOME/config}"
 : "${PROVIDERS_CONFIG:=$CONFIG_HOME/providers.json}"
 : "${MODELS_CONFIG:=$CONFIG_HOME/models-config.json}"
+: "${TOOLS_CONFIG:=$CONFIG_HOME/tools-config.json}"
+: "${TOOLS_LOCAL:=$CONFIG_HOME/tools-config.local.json}"
+
+# Per-team paths (resolved at runtime based on PROJECT)
+: "${TEAM_DIR:=$PROJECT/.software-house/team}"
+: "${TEAM_SPRINTS:=$TEAM_DIR/sprints}"
+: "${TEAM_BACKLOG:=$TEAM_DIR/backlog.md}"
+: "${TEAM_PLANS:=$TEAM_DIR/plans}"
 
 # Skill source directory (where this file lives)
 SKILL_SRC="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -515,6 +523,99 @@ load_config() {
 }
 
 # ---------------------------------------------------------------------------
+# Tools configuration (mirrors _shared.md section 16)
+# ---------------------------------------------------------------------------
+
+# Load tools config (base + local overlay).
+TOOLS_JSON=""
+load_tools() {
+  if [[ ! -f "$TOOLS_CONFIG" ]]; then
+    log_error "tools-config.json not found at $TOOLS_CONFIG"
+    return 1
+  fi
+  if command -v jq &>/dev/null; then
+    TOOLS_JSON="$(cat "$TOOLS_CONFIG")"
+    if [[ -f "$TOOLS_LOCAL" ]]; then
+      # Merge overlay on top of base
+      local overlay
+      overlay="$(cat "$TOOLS_LOCAL")"
+      # Merge shared_tools and role_tools from overlay
+      local shared_base shared_overlay shared_merged
+      shared_base="$(echo "$TOOLS_JSON" | jq -c '.shared_tools // []')"
+      shared_overlay="$(echo "$overlay" | jq -c '.shared_tools // []')"
+      shared_merged="$(echo "$shared_base $shared_overlay" | jq -s '.[0] + .[1] | unique')"
+      local role_base role_overlay role_merged
+      role_base="$(echo "$TOOLS_JSON" | jq -c '.role_tools // {}')"
+      role_overlay="$(echo "$overlay" | jq -c '.role_tools // {}')"
+      role_merged="$(echo "$role_base" | jq -c --argjson overlay "$role_overlay" '. * $overlay')"
+      TOOLS_JSON="$(echo "$TOOLS_JSON" | jq -c --argjson shared "$shared_merged" --argjson roles "$role_merged" '.shared_tools = $shared | .role_tools = $roles')"
+    fi
+  else
+    TOOLS_JSON="$(cat "$TOOLS_CONFIG")"
+  fi
+}
+
+# Get shared tools array (prints one tool per line).
+get_shared_tools() {
+  if [[ -z "$TOOLS_JSON" ]]; then
+    load_tools
+  fi
+  if command -v jq &>/dev/null; then
+    echo "$TOOLS_JSON" | jq -r '.shared_tools[]' 2>/dev/null
+  else
+    grep -A100 '"shared_tools"' "$TOOLS_CONFIG" 2>/dev/null | grep '"[a-z-]*"' | sed 's/.*"\([a-z-]*\)".*/\1/'
+  fi
+}
+
+# Get role-specific tools array (prints one tool per line).
+# get_role_tools <role-key>
+get_role_tools() {
+  local role="$1"
+  if [[ -z "$TOOLS_JSON" ]]; then
+    load_tools
+  fi
+  if command -v jq &>/dev/null; then
+    echo "$TOOLS_JSON" | jq -r ".role_tools.${role}[] // empty" 2>/dev/null
+  else
+    grep -A5 "\"${role}\"" "$TOOLS_CONFIG" 2>/dev/null | grep '"[a-z-]*"' | sed 's/.*"\([a-z-]*\)".*/\1/'
+  fi
+}
+
+# Resolve full tool list for a role (shared + role-specific, deduplicated).
+# resolve_agent_tools <role-key>
+# Prints: comma-separated canonical tool names
+resolve_agent_tools() {
+  local role="$1"
+  local tools=""
+  # Start with shared tools
+  tools="$(get_shared_tools | tr '\n' ',' | sed 's/,$//')"
+  # Add role-specific tools
+  local role_tools
+  role_tools="$(get_role_tools "$role" | tr '\n' ',' | sed 's/,$//')"
+  if [[ -n "$role_tools" ]]; then
+    if [[ -n "$tools" ]]; then
+      tools="${tools},${role_tools}"
+    else
+      tools="$role_tools"
+    fi
+  fi
+  # Deduplicate while preserving order
+  local seen="" result=""
+  IFS=',' read -ra arr <<< "$tools"
+  for t in "${arr[@]}"; do
+    if [[ -n "$t" ]] && ! echo "$seen" | grep -qw "$t"; then
+      if [[ -n "$result" ]]; then
+        result="${result},$t"
+      else
+        result="$t"
+      fi
+      seen="$seen $t"
+    fi
+  done
+  echo "$result"
+}
+
+# ---------------------------------------------------------------------------
 # Audit log (mirrors _shared.md section 5)
 # ---------------------------------------------------------------------------
 
@@ -685,4 +786,132 @@ require_company_init() {
     return 1
   fi
   return 0
+}
+
+# ---------------------------------------------------------------------------
+# Sprint and Backlog helpers (mirrors _shared.md section 17)
+# ---------------------------------------------------------------------------
+
+# Get the next sprint ID by scanning the sprints directory.
+next_sprint_id() {
+  local max_id=0
+  if [[ -d "$TEAM_SPRINTS" ]]; then
+    for d in "$TEAM_SPRINTS"/sprint-*/; do
+      local id
+      id="$(basename "$d" | sed 's/sprint-//')"
+      id="${id%%[!0-9]*}"
+      if [[ -n "$id" ]] && (( id > max_id )); then
+        max_id=$id
+      fi
+    done
+  fi
+  printf 'sprint-%03d' $((max_id + 1))
+}
+
+# Get the next backlog item ID from the backlog frontmatter.
+next_backlog_item_id() {
+  local next_id=1
+  if [[ -f "$TEAM_BACKLOG" ]]; then
+    next_id=$(grep '^next_id:' "$TEAM_BACKLOG" 2>/dev/null | sed 's/next_id:[[:space:]]*//')
+    next_id="${next_id:-1}"
+  fi
+  printf 'item-%03d' "$next_id"
+}
+
+# Read sprint frontmatter into variables.
+# read_sprint <sprint-id>
+# Sets: SPRINT_ID, SPRINT_NAME, SPRINT_GOAL, SPRINT_START, SPRINT_END, SPRINT_STATUS, SPRINT_PLAN_ID
+read_sprint() {
+  local sprint_id="$1"
+  local sprint_file="$TEAM_SPRINTS/$sprint_id/sprint.md"
+  if [[ ! -f "$sprint_file" ]]; then
+    log_error "Sprint $sprint_id not found at $sprint_file"
+    return 1
+  fi
+  SPRINT_ID=$(grep '^id:' "$sprint_file" | sed 's/id:[[:space:]]*//')
+  SPRINT_NAME=$(grep '^name:' "$sprint_file" | sed 's/name:[[:space:]]*//')
+  SPRINT_GOAL=$(grep '^goal:' "$sprint_file" | sed 's/goal:[[:space:]]*//')
+  SPRINT_START=$(grep '^start_date:' "$sprint_file" | sed 's/start_date:[[:space:]]*//')
+  SPRINT_END=$(grep '^end_date:' "$sprint_file" | sed 's/end_date:[[:space:]]*//')
+  SPRINT_STATUS=$(grep '^status:' "$sprint_file" | sed 's/status:[[:space:]]*//')
+  SPRINT_PLAN_ID=$(grep '^plan_id:' "$sprint_file" | sed 's/plan_id:[[:space:]]*//')
+}
+
+# ---------------------------------------------------------------------------
+# Plan helpers (mirrors _shared.md section 18)
+# ---------------------------------------------------------------------------
+
+# Get the next plan ID by scanning the plans directory.
+next_plan_id() {
+  local max_id=0
+  if [[ -d "$TEAM_PLANS" ]]; then
+    for d in "$TEAM_PLANS"/plan-*/; do
+      local id
+      id="$(basename "$d" | sed 's/plan-//')"
+      id="${id%%[!0-9]*}"
+      if [[ -n "$id" ]] && (( id > max_id )); then
+        max_id=$id
+      fi
+    done
+  fi
+  printf 'plan-%03d' $((max_id + 1))
+}
+
+# Read plan frontmatter into variables.
+# read_plan <plan-id>
+# Sets: PLAN_ID, PLAN_NAME, PLAN_STATUS, PLAN_CREATED_BY, PLAN_SPRINT_ID
+read_plan() {
+  local plan_id="$1"
+  local plan_file="$TEAM_PLANS/$plan_id/plan.md"
+  if [[ ! -f "$plan_file" ]]; then
+    log_error "Plan $plan_id not found at $plan_file"
+    return 1
+  fi
+  PLAN_ID=$(grep '^id:' "$plan_file" | sed 's/id:[[:space:]]*//')
+  PLAN_NAME=$(grep '^name:' "$plan_file" | sed 's/name:[[:space:]]*//')
+  PLAN_STATUS=$(grep '^status:' "$plan_file" | head -1 | sed 's/status:[[:space:]]*//')
+  PLAN_CREATED_BY=$(grep '^created_by:' "$plan_file" | sed 's/created_by:[[:space:]]*//')
+  PLAN_SPRINT_ID=$(grep '^sprint_id:' "$plan_file" | sed 's/sprint_id:[[:space:]]*//')
+}
+
+# Topological sort of tasks by dependencies.
+# Reads plan frontmatter tasks and outputs task IDs in execution order.
+# topological_sort <plan-id>
+topological_sort() {
+  local plan_id="$1"
+  local plan_file="$TEAM_PLANS/$plan_id/plan.md"
+  if [[ ! -f "$plan_file" ]]; then
+    log_error "Plan $plan_id not found"
+    return 1
+  fi
+  # Extract task IDs and their dependencies from the plan frontmatter
+  # This is a simplified implementation for the bash scaffold
+  # Full implementation uses jq when available
+  if command -v jq &>/dev/null; then
+    local tasks_json
+    tasks_json=$(sed -n '/^---$/,/^---$/p' "$plan_file" | head -n -1 | tail -n +2 | yq -r '.tasks' 2>/dev/null || echo '[]')
+    echo "$tasks_json" | jq -r '.[].id' 2>/dev/null
+  else
+    # Fallback: grep task-IDs from the plan file
+    grep -oE 'task-[0-9]+' "$plan_file" | sort -u
+  fi
+}
+
+# Spawn a sub-agent for a plan task (Claude Code only).
+# spawn_subagent <task-id> <assignee> <role> <prompt-text> <output-path>
+# This constructs the Agent tool invocation parameters.
+spawn_subagent() {
+  local task_id="$1"
+  local assignee="$2"
+  local role="$3"
+  local prompt_text="$4"
+  local output_path="$5"
+  # Resolve tools for this agent's role
+  local tools
+  tools=$(resolve_agent_tools "$role")
+  # The actual Agent tool invocation is done by the LLM reading this output,
+  # not by bash directly (bash cannot call the Agent tool).
+  printf 'SPAWN: task=%s assignee=%s role=%s tools=[%s]\n' "$task_id" "$assignee" "$role" "$tools"
+  printf 'OUTPUT: %s\n' "$output_path"
+  printf 'PROMPT: %s\n' "$prompt_text"
 }

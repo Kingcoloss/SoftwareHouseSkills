@@ -222,6 +222,15 @@
       "type": "string",
       "format": "date",
       "description": "ISO-8601 date (YYYY-MM-DD) when the agent record was last updated. Optional."
+    },
+    "tools": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "enum": ["read", "write", "edit", "bash", "glob", "grep", "agent", "web-search", "web-fetch"]
+      },
+      "description": "List of canonical tool names this agent is authorized to use. Populated from tools-config.json shared_tools + role_tools at hire time.",
+      "default": []
     }
   }
 }

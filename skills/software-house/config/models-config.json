@@ -45,6 +45,16 @@
       "provider": "ollama",
       "model": "qwen3-coder:7b",
       "effort": "low"
+    },
+    "researcher": {
+      "provider": "ollama",
+      "model": "qwen3-coder:32b",
+      "effort": "medium"
+    },
+    "business-analyst": {
+      "provider": "ollama",
+      "model": "qwen3-coder:32b",
+      "effort": "medium"
     }
   },
   "effort_presets": {
@@ -143,6 +153,18 @@
       "provider": "anthropic",
       "model": "claude-haiku-4-5",
       "effort": "low",
+      "note": "Use only after EGRESS-CONSENT-anthropic"
+    },
+    "researcher": {
+      "provider": "anthropic",
+      "model": "claude-sonnet-4-6",
+      "effort": "medium",
+      "note": "Use only after EGRESS-CONSENT-anthropic"
+    },
+    "business-analyst": {
+      "provider": "anthropic",
+      "model": "claude-sonnet-4-6",
+      "effort": "medium",
       "note": "Use only after EGRESS-CONSENT-anthropic"
     }
   },

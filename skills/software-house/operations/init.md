@@ -221,6 +221,21 @@ If the bundled file is missing, write a minimal stub:
 }
 ```
 
+#### 6.8 `$TOOLS_CONFIG` (`~/.software-house/config/tools-config.json`)
+
+If the file does not already exist, copy the default from the skill's bundled `config/tools-config.json`. The default `shared_tools` and `role_tools` MUST include the mandatory tool set and per-role additions.
+
+If the bundled file is missing, write a minimal stub:
+
+```json
+{
+  "version": 1,
+  "shared_tools": ["read", "write", "edit", "bash", "glob", "grep"],
+  "role_tools": { "default": [] },
+  "metadata": { "schema_version": 1 }
+}
+```
+
 ### 7. Append the audit log entry
 
 ```json
