@@ -17,6 +17,15 @@ set -euo pipefail
 : "${WIKI_PEOPLE:=$COMPANY_HOME/wiki/people}"
 : "${WIKI_TEAMS:=$COMPANY_HOME/wiki/teams}"
 : "${WIKI_DEPTS:=$COMPANY_HOME/wiki/departments}"
+: "${WIKI_CONCEPTS:=$COMPANY_HOME/wiki/concepts}"
+: "${WIKI_DECISIONS:=$COMPANY_HOME/wiki/decisions}"
+: "${WIKI_SYNTHESIS:=$COMPANY_HOME/wiki/synthesis}"
+: "${WIKI_HANDOFFS:=$COMPANY_HOME/wiki/handoffs}"
+: "${WIKI_HANDOFF_INBOX:=$COMPANY_HOME/wiki/handoffs/inbox}"
+: "${WIKI_HANDOFF_COMPLETED:=$COMPANY_HOME/wiki/handoffs/completed}"
+: "${WIKI_HANDOFF_BRIEFS:=$COMPANY_HOME/wiki/handoffs/briefs}"
+: "${WIKI_LOG:=$COMPANY_HOME/wiki/log.md}"
+: "${RAW_DIR:=$COMPANY_HOME/raw}"
 : "${ALUMNI:=$COMPANY_HOME/alumni}"
 : "${OUTSOURCE_MANIFEST:=$COMPANY_HOME/outsource/manifest.json}"
 : "${PROJECTS_INDEX:=$SH_HOME/projects-index.json}"
@@ -31,6 +40,15 @@ set -euo pipefail
 : "${TEAM_SPRINTS:=$TEAM_DIR/sprints}"
 : "${TEAM_BACKLOG:=$TEAM_DIR/backlog.md}"
 : "${TEAM_PLANS:=$TEAM_DIR/plans}"
+: "${TEAM_WIKI_PEOPLE:=$TEAM_DIR/wiki/people}"
+: "${TEAM_WIKI_DECISIONS:=$TEAM_DIR/wiki/decisions}"
+: "${TEAM_WIKI_SYNTHESIS:=$TEAM_DIR/wiki/synthesis}"
+: "${TEAM_WIKI_HANDOFFS:=$TEAM_DIR/wiki/handoffs}"
+: "${TEAM_WIKI_HANDOFF_INBOX:=$TEAM_DIR/wiki/handoffs/inbox}"
+: "${TEAM_WIKI_HANDOFF_COMPLETED:=$TEAM_DIR/wiki/handoffs/completed}"
+: "${TEAM_WIKI_HANDOFF_BRIEFS:=$TEAM_DIR/wiki/handoffs/briefs}"
+: "${TEAM_WIKI_LOG:=$TEAM_DIR/wiki/log.md}"
+: "${TEAM_RAW_DIR:=$TEAM_DIR/raw}"
 
 # Skill source directory (where this file lives)
 SKILL_SRC="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -273,6 +291,7 @@ read_agent() {
   AGENT_ONBOARD_STATUS="$(echo "$fm_content" | grep '^onboard_status:' | head -1 | sed 's/^onboard_status:[[:space:]]*//' || echo "null")"
   AGENT_SECONDARY_TEAMS="$(echo "$fm_content" | grep '^secondary_teams:' | head -1 | sed 's/^secondary_teams:[[:space:]]*//' || echo "[]")"
   AGENT_UPDATED_AT="$(echo "$fm_content" | grep '^updated_at:' | head -1 | sed 's/^updated_at:[[:space:]]*//' || echo "null")"
+  AGENT_HARNESS="$(echo "$fm_content" | grep '^harness:' | head -1 | sed 's/^harness:[[:space:]]*//' || echo "null")"
 }
 
 # Write a YAML frontmatter field update using sed.
@@ -616,6 +635,49 @@ resolve_agent_tools() {
 }
 
 # ---------------------------------------------------------------------------
+# Role template helpers (mirrors _shared.md section 20)
+# ---------------------------------------------------------------------------
+
+# Load role templates from config.
+# Sets ROLE_TEMPLATES_JSON global.
+load_role_templates() {
+  if [[ ! -f "$ROLE_TEMPLATES" ]]; then
+    log_error "role-templates.json not found at $ROLE_TEMPLATES"
+    return 1
+  fi
+  ROLE_TEMPLATES_JSON="$(cat "$ROLE_TEMPLATES")"
+}
+
+# Get a field from a role template.
+# get_role_template_field <role-key> <field>
+# Prints the field value (string for simple fields, JSON for arrays/objects).
+get_role_template_field() {
+  local role="$1"
+  local field="$2"
+  if [[ -z "${ROLE_TEMPLATES_JSON:-}" ]]; then
+    load_role_templates
+  fi
+  if command -v jq &>/dev/null; then
+    echo "$ROLE_TEMPLATES_JSON" | jq -r ".role_templates.${role}.${field} // empty" 2>/dev/null
+  else
+    log_warn "jq not found -- cannot extract role template field"
+    echo ""
+  fi
+}
+
+# List all role template keys.
+list_role_template_keys() {
+  if [[ -z "${ROLE_TEMPLATES_JSON:-}" ]]; then
+    load_role_templates
+  fi
+  if command -v jq &>/dev/null; then
+    echo "$ROLE_TEMPLATES_JSON" | jq -r '.role_templates | keys[]' 2>/dev/null
+  else
+    grep -E '^\s+"[a-z]' "$ROLE_TEMPLATES" 2>/dev/null | sed 's/.*"\([^"]*\)".*/\1/'
+  fi
+}
+
+# ---------------------------------------------------------------------------
 # Audit log (mirrors _shared.md section 5)
 # ---------------------------------------------------------------------------
 
@@ -698,6 +760,82 @@ detect_harnesses() {
   [[ -d "$HOME/.claude" ]] && HAS_CLAUDE_CODE=1 || HAS_CLAUDE_CODE=0
   { [[ -d "$HOME/.codex" ]] || [[ -d "$HOME/.agents" ]]; } && HAS_CODEX=1 || HAS_CODEX=0
   [[ -d "$HOME/.gemini" ]] && HAS_GEMINI=1 || HAS_GEMINI=0
+}
+
+# detect_harness_cli <harness-id>
+# Returns 0 if the underlying CLI binary is on PATH, 1 otherwise.
+# Maps harness ids to executables: claude-code -> claude, codex -> codex,
+# gemini -> gemini, ollama:* -> ollama.
+detect_harness_cli() {
+  local harness="$1"
+  case "$harness" in
+    claude-code)        command -v claude  &>/dev/null ;;
+    codex)              command -v codex   &>/dev/null ;;
+    gemini)             command -v gemini  &>/dev/null ;;
+    ollama:*)           command -v ollama  &>/dev/null ;;
+    ""|null|none)       return 1 ;;
+    *)                  return 1 ;;
+  esac
+}
+
+# is_valid_harness <harness-id> [<provider>]
+# Returns 0 if the harness id is well-formed and (when provider is given) compatible.
+# Specifically rejects 'ollama:gemini' since `ollama launch` does not support gemini.
+is_valid_harness() {
+  local harness="$1"
+  local provider="${2:-}"
+
+  case "$harness" in
+    ""|null|none) return 0 ;;
+    claude-code|codex|gemini) return 0 ;;
+    ollama:gemini)
+      # Explicitly rejected: `ollama launch` integration list does not include gemini.
+      return 1
+      ;;
+    ollama:claude|ollama:claude-desktop|ollama:codex|ollama:cline|ollama:copilot|ollama:droid|ollama:hermes|ollama:kimi|ollama:opencode|ollama:openclaw|ollama:pi|ollama:pool|ollama:vscode)
+      # ollama-launch transports require provider == ollama
+      if [[ -n "$provider" && "$provider" != "ollama" ]]; then
+        return 1
+      fi
+      return 0
+      ;;
+    *) return 1 ;;
+  esac
+}
+
+# resolve_harness <agent-harness> <provider>
+# Resolution order:
+#   1. agent frontmatter `harness` (if non-null/non-empty)
+#   2. models-config.json `harness_defaults[provider]`
+#   3. null (direct provider execution)
+# Prints the resolved harness id (empty string for null).
+resolve_harness() {
+  local agent_harness="$1"
+  local provider="$2"
+
+  # Agent-level override
+  case "$agent_harness" in
+    ""|null|none) ;;
+    *) printf '%s' "$agent_harness"; return 0 ;;
+  esac
+
+  # Config default by provider
+  if [[ -z "${MODELS_JSON:-}" ]]; then
+    load_models 2>/dev/null || true
+  fi
+
+  if [[ -n "${MODELS_JSON:-}" ]] && command -v jq &>/dev/null; then
+    local cfg
+    cfg="$(echo "$MODELS_JSON" | jq -r ".harness_defaults.${provider} // \"\"" 2>/dev/null)"
+    case "$cfg" in
+      ""|null) ;;
+      *) printf '%s' "$cfg"; return 0 ;;
+    esac
+  fi
+
+  # No harness configured
+  printf ''
+  return 0
 }
 
 # ---------------------------------------------------------------------------

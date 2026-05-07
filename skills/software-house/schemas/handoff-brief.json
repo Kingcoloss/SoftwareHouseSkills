@@ -1,0 +1,66 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "HandoffBrief",
+  "description": "Validates the YAML frontmatter of handoff brief files ($WIKI_HANDOFF_BRIEFS/<from>-<to>-<ts>.md and $WIKI_HANDOFF_INBOX/<agent>-task-<ts>.md).",
+  "type": "object",
+  "required": ["from", "to", "task", "priority", "created_at", "status"],
+  "additionalProperties": false,
+  "properties": {
+    "from": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9-]{0,63}$",
+      "description": "Name of the agent sending the brief."
+    },
+    "to": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9-]{0,63}$",
+      "description": "Name of the agent receiving the brief."
+    },
+    "task": {
+      "type": "string",
+      "description": "Description of the task being handed off."
+    },
+    "priority": {
+      "type": "string",
+      "enum": ["high", "medium", "low"],
+      "description": "Priority of the handoff."
+    },
+    "context_pages": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "List of wiki page paths that provide context for this handoff.",
+      "default": []
+    },
+    "created_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "ISO-8601 timestamp when the brief was created."
+    },
+    "status": {
+      "type": "string",
+      "enum": ["pending", "in-progress", "done"],
+      "description": "Current status of the handoff."
+    },
+    "completed_at": {
+      "type": ["string", "null"],
+      "format": "date-time",
+      "description": "ISO-8601 timestamp when the brief was completed. null if not completed."
+    },
+    "deliverables": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Expected deliverables from the receiving agent.",
+      "default": []
+    },
+    "dependencies": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "IDs of other briefs this depends on.",
+      "default": []
+    },
+    "brief_id": {
+      "type": "string",
+      "description": "Unique identifier for this brief (matches filename without .md)."
+    }
+  }
+}

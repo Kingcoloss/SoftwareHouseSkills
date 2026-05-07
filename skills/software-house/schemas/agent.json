@@ -231,6 +231,60 @@
       },
       "description": "List of canonical tool names this agent is authorized to use. Populated from tools-config.json shared_tools + role_tools at hire time.",
       "default": []
+    },
+    "harness": {
+      "type": ["string", "null"],
+      "pattern": "^(claude-code|codex|gemini|ollama:(claude|claude-desktop|codex|cline|copilot|droid|hermes|kimi|opencode|openclaw|pi|pool|vscode))$",
+      "description": "CLI transport used to spawn this agent. null = direct provider execution. Direct harnesses: 'claude-code', 'codex', 'gemini'. Ollama launch transports: 'ollama:<integration>'. 'ollama:gemini' is intentionally NOT permitted -- gemini is not a supported ollama launch integration. Resolution order: agent.harness > models-config.harness_defaults[provider] > null.",
+      "default": null
+    },
+    "responsibilities": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "List of role responsibilities. Populated from role-templates.json at hire time.",
+      "default": []
+    },
+    "deliverables": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "List of expected deliverables for this role. Populated from role-templates.json at hire time.",
+      "default": []
+    },
+    "collaborates_with": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "List of role keys this agent regularly collaborates with. Populated from role-templates.json at hire time.",
+      "default": []
+    },
+    "handoff_triggers": {
+      "type": "object",
+      "description": "Map of event types to arrays of role keys that should receive a handoff brief. Populated from role-templates.json at hire time.",
+      "default": {}
+    },
+    "confidence": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 1,
+      "description": "Confidence score for this agent's wiki content (Karpathy wiki-LLM pattern). 0.0-1.0.",
+      "default": 1.0
+    },
+    "lifecycle": {
+      "type": "string",
+      "enum": ["draft", "reviewed", "verified", "stale", "archived"],
+      "description": "Wiki page lifecycle state (Karpathy wiki-LLM pattern).",
+      "default": "draft"
+    },
+    "last_compiled": {
+      "type": ["string", "null"],
+      "format": "date",
+      "description": "ISO-8601 date (YYYY-MM-DD) when this agent's wiki page was last compiled/updated by an LLM. null if never compiled.",
+      "default": null
+    },
+    "source_refs": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "List of paths to raw source documents in raw/ that this wiki page was compiled from.",
+      "default": []
     }
   }
 }

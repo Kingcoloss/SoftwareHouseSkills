@@ -53,6 +53,12 @@ Always:
 ~/.software-house/company/wiki/teams/
 ~/.software-house/company/wiki/departments/
 ~/.software-house/company/wiki/synthesis/
+~/.software-house/company/wiki/concepts/
+~/.software-house/company/wiki/decisions/
+~/.software-house/company/wiki/handoffs/
+~/.software-house/company/wiki/handoffs/inbox/
+~/.software-house/company/wiki/handoffs/completed/
+~/.software-house/company/wiki/handoffs/briefs/
 ~/.software-house/company/policies/
 ~/.software-house/company/alumni/
 ~/.software-house/company/outsource/

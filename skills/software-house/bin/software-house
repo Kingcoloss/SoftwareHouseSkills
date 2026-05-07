@@ -86,6 +86,12 @@ Commands:
   plan status       Show current execution status of a plan
   plan synthesize   Tech-lead synthesizes completed task results
 
+  delegate          Delegate a task to an agent (with provider fallback)
+  handoff           Manage inter-agent handoff briefs (list/show/complete/generate)
+
+  wiki-ingest       Ingest a source document into the wiki (archive + compile)
+  wiki-lint         Run wiki-specific health checks (confidence, wikilinks, stale pages)
+
 Options:
   --help            Show this help message
   --version         Show version
@@ -152,6 +158,14 @@ resolve_command() {
     plan-execute)   echo "plan-execute" ;;
     plan-status)    echo "plan-status" ;;
     plan-synthesize) echo "plan-synthesize" ;;
+    handoff-list)     echo "handoff-list" ;;
+    handoff-show)     echo "handoff-show" ;;
+    handoff-complete) echo "handoff-complete" ;;
+    handoff-generate) echo "handoff-generate" ;;
+    delegate)       echo "delegate" ;;
+    handoff)        echo "handoff" ;;
+    wiki-ingest)    echo "wiki-ingest" ;;
+    wiki-lint)      echo "wiki-lint" ;;
     *)              echo "" ;;
   esac
 }
@@ -250,6 +264,12 @@ main() {
       if (( $# > 0 )) && [[ "$1" != --* ]]; then
         local sub="$1"; shift
         cmd="plan-${sub}"
+      fi
+      ;;
+    handoff)
+      if (( $# > 0 )) && [[ "$1" != --* ]]; then
+        local sub="$1"; shift
+        cmd="handoff-${sub}"
       fi
       ;;
   esac

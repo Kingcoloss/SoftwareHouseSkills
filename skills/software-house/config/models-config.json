@@ -72,6 +72,11 @@
       "max_tokens": 65536,
       "thinking": true,
       "temperature": 0.5
+    },
+    "xhigh": {
+      "max_tokens": 131072,
+      "thinking": true,
+      "temperature": 0.6
     }
   },
   "model_aliases": {
@@ -110,63 +115,70 @@
     "tech-lead": {
       "provider": "anthropic",
       "model": "claude-opus-4-7",
-      "effort": "high",
+      "effort": "xhigh",
       "note": "Use only after EGRESS-CONSENT-anthropic"
     },
     "system-architect": {
       "provider": "anthropic",
       "model": "claude-opus-4-7",
-      "effort": "high",
+      "effort": "xhigh",
       "note": "Use only after EGRESS-CONSENT-anthropic"
     },
     "code-reviewer": {
       "provider": "anthropic",
       "model": "claude-sonnet-4-6",
-      "effort": "medium",
+      "effort": "high",
       "note": "Use only after EGRESS-CONSENT-anthropic"
     },
     "backend-dev": {
       "provider": "anthropic",
       "model": "claude-sonnet-4-6",
-      "effort": "medium",
+      "effort": "high",
       "note": "Use only after EGRESS-CONSENT-anthropic"
     },
     "frontend-dev": {
       "provider": "anthropic",
       "model": "claude-sonnet-4-6",
-      "effort": "medium",
+      "effort": "high",
       "note": "Use only after EGRESS-CONSENT-anthropic"
     },
     "doc-writer": {
       "provider": "anthropic",
       "model": "claude-haiku-4-5",
-      "effort": "low",
+      "effort": "high",
       "note": "Use only after EGRESS-CONSENT-anthropic"
     },
     "linter": {
       "provider": "anthropic",
       "model": "claude-haiku-4-5",
-      "effort": "low",
+      "effort": "high",
       "note": "Use only after EGRESS-CONSENT-anthropic"
     },
     "test-runner": {
       "provider": "anthropic",
       "model": "claude-haiku-4-5",
-      "effort": "low",
+      "effort": "high",
       "note": "Use only after EGRESS-CONSENT-anthropic"
     },
     "researcher": {
       "provider": "anthropic",
       "model": "claude-sonnet-4-6",
-      "effort": "medium",
+      "effort": "high",
       "note": "Use only after EGRESS-CONSENT-anthropic"
     },
     "business-analyst": {
       "provider": "anthropic",
       "model": "claude-sonnet-4-6",
-      "effort": "medium",
+      "effort": "high",
       "note": "Use only after EGRESS-CONSENT-anthropic"
     }
+  },
+  "harness_defaults": {
+    "_comment": "Default harness (CLI transport) per provider. null = direct provider execution. Valid harnesses: 'claude-code', 'codex', 'gemini', or 'ollama:<integration>' where <integration> is one of: claude, claude-desktop, codex, cline, copilot, droid, hermes, kimi, opencode, openclaw, pi, pool, vscode. Note: 'ollama:gemini' is NOT supported -- gemini is not a recognized ollama launch integration. Per-agent 'harness' frontmatter overrides this.",
+    "ollama": null,
+    "lmstudio": null,
+    "vllm": null,
+    "anthropic": null
   },
   "metadata": {
     "schema_version": 1,

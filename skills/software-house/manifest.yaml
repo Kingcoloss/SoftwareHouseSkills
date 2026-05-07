@@ -1,6 +1,6 @@
 schema_version: 1
 name: software-house
-version: 0.1.0
+version: 0.9.0
 description: >
   Turn the user's computer into a managed software house: projects with
   CLAUDE.md (or AGENTS.md, GEMINI.md) are teams, subagents are employees,
@@ -117,6 +117,13 @@ operations:
   - {name: plan-execute,    file: operations/plan-execute.md,    tier: 3}
   - {name: plan-status,     file: operations/plan-status.md,     tier: 1}
   - {name: plan-synthesize, file: operations/plan-synthesize.md, tier: 2}
+  # Phase 7 -- Sub-Agent Delegation
+  - {name: delegate,     file: operations/delegate.md,     tier: 2}
+  # Phase 8 -- Inter-Agent Handoff
+  - {name: handoff,      file: operations/handoff.md,      tier: 2}
+  # Phase 9 -- Wiki-LLM Enhancement
+  - {name: wiki-ingest,  file: operations/wiki-ingest.md,  tier: 2}
+  - {name: wiki-lint,   file: operations/wiki-lint.md,     tier: 1}
 
 # Provider awareness -- pointer to the catalog the skill loads
 providers_catalog: config/providers.json
