@@ -202,6 +202,47 @@ bin/sh-agent alice "Refactor the auth middleware" --harness claude-code
 
 `--execute` จะรัน sub-agent inline หลังผ่าน confirmation tier 2 และเขียน response ลง `.md` file. ถ้าไม่ใส่ `--execute`, operation จะ print แค่คำสั่ง `sh-agent` ให้คุณดูก่อน.
 
+#### Ollama Provider Routing
+
+Role default ทุกตัวใช้ `provider: ollama`. คำสั่งจริงที่รันขึ้นอยู่กับ resolution order ของ field `harness`:
+
+1. Agent frontmatter `harness` (override ระดับ agent)
+2. `models-config.json` `harness_defaults[provider]`
+3. `null` (เรียก provider ตรง)
+
+**ค่า default ปัจจุบัน** (`harness_defaults.ollama: null`): agent ที่ใช้ ollama ทุกตัวจะตกไปที่ **Tier 2 -- เรียก provider ตรง** ซึ่งรัน:
+
+```bash
+ollama run <model> --nowordwrap < /tmp/sh-agent-ollama-prompt-XXXXXX.txt
+```
+
+Prompt file ฝัง system prompt เป็น prefix block `<<SYSTEM>>...<<END_SYSTEM>>` เพราะ `ollama run` ไม่มี flag `--system`. ถ้า effort เป็น `high` หรือ `xhigh` จะลอง `--think=high` ก่อน ถ้า fail จะ retry โดยไม่มี `--think`.
+
+**ข้อจำกัด:** `ollama run` เป็นการเรียก model เปล่าๆ ไม่มี tool ecosystem (ไม่มี Read/Write/Edit/Glob/Grep). Agent ที่ต้องแก้โค้ดต้องมี tools. ถ้าจะ route agent ที่ใช้ ollama ผ่าน harness ที่มี tools ให้ตั้ง `harness` เป็นหนึ่งใน:
+
+| Harness id | คำสั่ง | Tool access |
+|---|---|---|
+| `ollama:claude` | `ollama launch claude --model <m> -y -- -p --system-prompt ... --output-format text --dangerously-skip-permissions` | เต็ม (Read/Write/Edit/Bash/Glob/Grep) |
+| `ollama:codex` | `ollama launch codex --model <m> -y -- exec ... -s workspace-write -o <output>` | เต็ม (ภายใต้ workspace) |
+| `ollama:cline` / `ollama:copilot` / อื่นๆ | `ollama launch <integration> --model <m> -y` (ส่ง stdin แบบ generic) | ขึ้นกับ integration |
+
+ถ้าจะเปลี่ยน default ของ agent ที่ใช้ ollama ทุกตัว ให้แก้ `models-config.local.json`:
+
+```json
+{ "harness_defaults": { "ollama": "ollama:claude" } }
+```
+
+หรือต่อ agent:
+
+```bash
+/software-house set-model <agent-name> --harness ollama:claude
+```
+
+**ข้อจำกัดเพิ่มเติม:**
+- `ollama:gemini` **ถูกปฏิเสธตอน validation** -- `gemini` ไม่อยู่ใน integration list ของ `ollama launch`
+- `harness: claude-code` ร่วมกับ `provider: ollama` เป็น configuration ที่ขัดแย้ง (Agent tool ของ Claude Code ต้องการ Anthropic model id) จะถูกปฏิเสธตอน hire
+- เมื่อ orchestrate จาก Claude Code ด้วย `harness: ollama:claude`, adapter shim จะตั้ง `model: inherit` และ dispatch ผ่าน Bash (`nohup` + `Bash(run_in_background)`) แทน Agent tool เพราะ Agent tool ไม่สามารถ spawn ollama model ได้
+
 ### Inter-Agent Handoff
 
 ```
@@ -457,6 +498,14 @@ Tier:
    - **Tier 2** -- ถ้าไม่ได้ตั้ง, เรียก provider adapter ตรงๆ (`lib/providers/{ollama,lmstudio,vllm,anthropic}.sh`).
    - **Tier 3** -- ถ้า fail, fallback ไป Anthropic ถ้า role มี `fallback_claude` ตั้งไว้และมี egress consent.
 5. เขียน response ของ model ลง `.md` file และ append audit record แบบ JSONL.
+
+#### รายละเอียดการ Execute ของ Ollama
+
+เมื่อ agent ที่ใช้ ollama ไม่ได้ตั้ง `harness` (ค่า default), executor จะเรียก `provider_execute_ollama()` ซึ่งรัน `ollama run <model>` ตรงๆ. System prompt จะฝังเป็น block `<<SYSTEM>>...<<END_SYSTEM>>` เพราะ `ollama run` ไม่มี flag `--system`. Task ที่ effort สูงจะลอง `--think=high` ก่อนและ fallback เป็นไม่มี think ถ้า fail.
+
+เมื่อตั้ง `harness` เป็น `ollama:<integration>`, executor จะเรียก `execute_via_ollama_launch()` ซึ่งรัน `ollama launch <integration> --model <m> -y -- <args>`. ค่า `<args>` แตกต่างกันตาม integration: `claude` จะได้ `-p --system-prompt ... --output-format text`, `codex` จะได้ `exec ... -s workspace-write -o <output>`, ส่วนตัวอื่นๆ จะได้ prompt รวม `<system>...<user>...` ผ่าน stdin.
+
+Harness `ollama:claude` เป็นค่า default ที่แนะนำสำหรับ agent ที่ต้องแก้โค้ดเพราะให้ tool ecosystem เต็มรูปแบบ (Read/Write/Edit/Bash/Glob/Grep) ผ่าน runtime ของ Claude Code.
 
 ---
 

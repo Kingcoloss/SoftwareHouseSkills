@@ -43,6 +43,40 @@ Valid harness ids:
 - `gemini` -- spawn via `gemini -p ... -y -o text` (system prompt embedded)
 - `ollama:<integration>` -- spawn via `ollama launch <integration> --model <m> -- <args>`. Supported integrations: `claude`, `claude-desktop`, `codex`, `cline`, `copilot`, `droid`, `hermes`, `kimi`, `opencode`, `openclaw`, `pi`, `pool`, `vscode`. Note: `ollama:gemini` is **not** supported (gemini is not in the `ollama launch` integration list) and is rejected at validation time.
 
+### Claude Code orchestrator constraint (`Agent` tool ≠ ollama models)
+
+When the orchestrator is running inside **Claude Code** and the user invokes `delegate <agent>` with intent to spawn a sub-agent via Claude Code's native `Agent` tool (subagent_type=<agent>), there is a hard routing constraint:
+
+- The Claude Code `Agent` tool reads the per-project adapter shim at `$PROJECT/.claude/agents/<agent>.md`, NOT the canonical agent file.
+- The `model:` value in that adapter MUST be a Claude Code-recognized identifier: `inherit`, `claude-opus-4-7`, `claude-sonnet-4-6`, `claude-haiku-4-5-20251001`, or another Anthropic model id valid for the Claude Code harness.
+- An ollama model identifier such as `glm-5.1:cloud`, `qwen3-coder:32b`, `deepseek-v3:671b-q4_K_M` will FAIL the Agent-tool spawn with: `There's an issue with the selected model (<id>). It may not exist or you may not have access to it.`
+
+The skill MUST handle this case explicitly — `hire` and `set-model` both write the adapter shim, and the writer logic must:
+
+1. Read `harness` frontmatter from the canonical agent file (default: `null` = direct provider execution).
+2. If `harness` is `claude-code` AND provider is `ollama`/`lmstudio`/`vllm`/etc., this is a contradictory configuration — refuse at hire time.
+3. If `harness` is `ollama:claude` (the recommended default for ollama agents under a Claude Code orchestrator), the `.claude/agents/<name>.md` adapter shim MUST set `model: inherit` (or omit `model`) and add a body comment describing the actual Bash spawn pattern. The `Agent` tool spawn path is NOT used; instead, the orchestrator prints the Bash command (see "Bash spawn pattern" below) for the user to dispatch.
+4. If `harness` is null and provider is local (ollama/lmstudio/vllm), the adapter shim should set `model: inherit` and the orchestrator dispatches via the documented Bash pattern. Direct `ollama run` / `lmstudio chat` invocation is acceptable but loses the harness's tool ecosystem (Read/Write/Edit/Bash/Glob/Grep) — most tasks need that ecosystem, so `ollama:claude` is the practical default for code-modifying agents.
+
+### Bash spawn pattern (for ollama:claude harness, background + monitorable)
+
+```bash
+mkdir -p /tmp/<project>_subagent/<agent-name>
+nohup bash -c 'ollama launch claude --model <model> -y -- \
+  --dangerously-skip-permissions --verbose \
+  --output-format stream-json --include-partial-messages \
+  -p "$(cat /tmp/<project>_subagent/<agent-name>/briefing.md)" \
+  > /tmp/<project>_subagent/<agent-name>/output.log \
+  2> /tmp/<project>_subagent/<agent-name>/error.log' > /dev/null 2>&1 &
+```
+
+Hard rules (learned the painful way):
+- **DO NOT use plain `-p` without `stream-json`** — output is block-buffered and the orchestrator sees nothing until the whole task finishes.
+- **DO write the briefing to a file first** (not inline) — the briefing must enforce the `=== STATUS ===` / `=== CHECKPOINT ===` blocks so the orchestrator can monitor without re-reading the whole log.
+- **DO use a per-agent subdirectory** under `/tmp/<project>_subagent/` so parallel multi-agent runs don't collide.
+- **DO use `Bash(run_in_background:true)`** when the orchestrator is Claude Code, so the orchestrator gets a completion notification when the sub-agent process exits.
+- **DO NOT poll** — use `ScheduleWakeup` (delaySeconds 240–300) instead.
+
 When `--execute` is set, the resolved harness routes through `execute_with_fallback`'s three-tier path:
 
 1. Tier 1: `execute_via_harness <id>` -- the configured CLI transport.

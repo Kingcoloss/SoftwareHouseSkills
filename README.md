@@ -202,6 +202,47 @@ Or via the skill:
 
 `--execute` runs the sub-agent inline after the tier-2 confirmation, writing the response to a `.md` output file. Without `--execute`, the operation prints the `sh-agent` command for manual review.
 
+#### Ollama Provider Routing
+
+All default roles use `provider: ollama`. The actual command line depends on the `harness` field resolution order:
+
+1. Agent frontmatter `harness` (per-agent override)
+2. `models-config.json` `harness_defaults[provider]`
+3. `null` (direct provider execution)
+
+**Current default** (`harness_defaults.ollama: null`): every ollama agent falls through to **Tier 2 -- direct provider execution**, which runs:
+
+```bash
+ollama run <model> --nowordwrap < /tmp/sh-agent-ollama-prompt-XXXXXX.txt
+```
+
+The prompt file embeds the system prompt as a `<<SYSTEM>>...<<END_SYSTEM>>` prefix block because `ollama run` has no `--system` flag. If effort is `high` or `xhigh`, `--think=high` is tried first and retried without it on failure.
+
+**Limitation:** `ollama run` is a bare model invocation with no tool ecosystem (no Read/Write/Edit/Glob/Grep). Code-modifying agents need tools. To route an ollama agent through a harness that provides tools, set `harness` to one of:
+
+| Harness id | Command | Tool access |
+|---|---|---|
+| `ollama:claude` | `ollama launch claude --model <m> -y -- -p --system-prompt ... --output-format text --dangerously-skip-permissions` | Full (Read/Write/Edit/Bash/Glob/Grep) |
+| `ollama:codex` | `ollama launch codex --model <m> -y -- exec ... -s workspace-write -o <output>` | Full (workspace-scoped) |
+| `ollama:cline` / `ollama:copilot` / etc. | `ollama launch <integration> --model <m> -y` (generic stdin passthrough) | Varies by integration |
+
+To change the default for all ollama agents, edit `models-config.local.json`:
+
+```json
+{ "harness_defaults": { "ollama": "ollama:claude" } }
+```
+
+Or per-agent:
+
+```bash
+/software-house set-model <agent-name> --harness ollama:claude
+```
+
+**Restrictions:**
+- `ollama:gemini` is **rejected at validation time** -- `gemini` is not in the `ollama launch` integration list.
+- `harness: claude-code` combined with `provider: ollama` is contradictory (Claude Code Agent tool requires an Anthropic model id) and is refused at hire time.
+- When orchestrating from Claude Code with `harness: ollama:claude`, the adapter shim sets `model: inherit` and dispatches via Bash (`nohup` + `Bash(run_in_background)`) rather than the Agent tool, which cannot spawn ollama models.
+
 ### Inter-Agent Handoff
 
 ```
@@ -457,6 +498,14 @@ When `bin/sh-agent <agent> <task>` (or `delegate --execute`) runs, the executor:
    - **Tier 2** -- otherwise call the provider adapter directly (`lib/providers/{ollama,lmstudio,vllm,anthropic}.sh`).
    - **Tier 3** -- on failure, fall back to Anthropic if `fallback_claude` is configured for the role and egress consent is on file.
 5. Writes the model's response to a `.md` output file and appends a JSONL audit record.
+
+#### Ollama Execution Detail
+
+When an ollama agent has no `harness` set (the default), the executor calls `provider_execute_ollama()` which runs `ollama run <model>` directly. System prompts are embedded as `<<SYSTEM>>...<<END_SYSTEM>>` blocks because `ollama run` lacks a `--system` flag. High-effort tasks first try `--think=high` and fall back to no-think on failure.
+
+When `harness` is set to `ollama:<integration>`, the executor calls `execute_via_ollama_launch()` which runs `ollama launch <integration> --model <m> -y -- <args>`. The `<args>` vary by integration: `claude` gets `-p --system-prompt ... --output-format text`, `codex` gets `exec ... -s workspace-write -o <output>`, and all others get a combined `<system>...<user>...` prompt via stdin.
+
+The `ollama:claude` harness is the recommended default for code-modifying agents because it provides the full tool ecosystem (Read/Write/Edit/Bash/Glob/Grep) through the Claude Code runtime.
 
 ---
 
