@@ -1,12 +1,9 @@
 ---
 name: yuki
-description: code-reviewer agent (software-house managed)
+description: code-reviewer agent
 model: glm-5.1:cloud
 ---
 
-Managed by software-house skill. Canonical definition:
-  /Users/kanganapong.s/Documents/Private/claude-code-skills/software-house-company/SoftwareHouseSkills/.software-house/agents/yuki.md
+Canonical definition at: /Users/kanganapong.s/Documents/Private/claude-code-skills/software-house-company/SoftwareHouseSkills/.software-house/agents/yuki.md
 
-Role: code-reviewer
-Provider: ollama
-Effort: high
+Read that file before responding.

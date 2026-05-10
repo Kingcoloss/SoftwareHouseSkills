@@ -85,8 +85,10 @@ Commands:
   plan execute      Spawn parallel sub-agents to execute a plan
   plan status       Show current execution status of a plan
   plan synthesize   Tech-lead synthesizes completed task results
+  plan cross-project Generate cross-project analysis context
 
   delegate          Delegate a task to an agent (with provider fallback)
+  gateway           Directly message an agent from the CEO
   handoff           Manage inter-agent handoff briefs (list/show/complete/generate)
 
   wiki-ingest       Ingest a source document into the wiki (archive + compile)
@@ -158,11 +160,13 @@ resolve_command() {
     plan-execute)   echo "plan-execute" ;;
     plan-status)    echo "plan-status" ;;
     plan-synthesize) echo "plan-synthesize" ;;
+    plan-cross-project) echo "plan-cross-project" ;;
     handoff-list)     echo "handoff-list" ;;
     handoff-show)     echo "handoff-show" ;;
     handoff-complete) echo "handoff-complete" ;;
     handoff-generate) echo "handoff-generate" ;;
     delegate)       echo "delegate" ;;
+    gateway)        echo "gateway" ;;
     handoff)        echo "handoff" ;;
     wiki-ingest)    echo "wiki-ingest" ;;
     wiki-lint)      echo "wiki-lint" ;;

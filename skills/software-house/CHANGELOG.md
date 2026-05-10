@@ -5,6 +5,24 @@ All notable changes to the software-house skill are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.10.0] - 2026-05-10
+
+### Added
+
+- Dhamma-powered decision making: core Buddhist epistemic methods (Kalāma, Yoniso Manasikāra, Upekkhā, etc.) injected into agent system prompts via `core_principles` in role templates.
+- CEO-to-Agent Gateway: new `gateway` command for direct directive messaging from the CEO to specific agents, bypassing standard team triggers.
+- Cross-Project Analysis: new `plan cross-project` command that aggregates architectural context (decisions, synthesis) from multiple projects linked via `PROJECTS_INDEX`.
+- Multi-layered Token Optimizer: configurable 'Senior Technical Editor' hook using `gemini-2.5-flash` (or Ollama) to produce high-density technical summaries for all agent communications.
+- Summary-Only Output Flow: refactored agent execution pipeline to preserve only optimized summaries, eliminating redundant context files and improving token efficiency.
+- Harness Tool Validation: automated checks to ensure a chosen harness (Gemini, Claude Code, Codex) supports the specific tools required by an agent's role (e.g., `mcp_notebooklm` for Researchers).
+- Configurable Optimizer: new `optimizer` block in `models-config.json` to customize the provider, model, and effort for the optimization hook.
+
+### Fixed
+
+- Mac/Bash 3.2 Compatibility: resolved multiple 'unbound variable' errors in `sh-agent` related to `$PROJECT` and empty arrays (`"${CONTEXT_PAGES[@]}"`).
+- JQ Path Parsing: fixed syntax errors in `jq` filters when handling role names with hyphens (e.g., `tech-lead`).
+- Team Selection: fixed a `jq` logic error in `gateway` and `handoff` commands when searching for teams in `projects-index.json`.
+
 ## [0.9.0] - 2026-05-07
 
 ### Added

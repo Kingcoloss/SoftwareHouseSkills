@@ -178,7 +178,14 @@
     "ollama": null,
     "lmstudio": null,
     "vllm": null,
-    "anthropic": null
+    "anthropic": null,
+    "google": "gemini"
+  },
+  "optimizer": {
+    "provider": "google",
+    "model": "gemini-2.5-flash",
+    "effort": "low",
+    "harness": "gemini"
   },
   "metadata": {
     "schema_version": 1,

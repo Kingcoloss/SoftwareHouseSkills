@@ -115,6 +115,19 @@ op_delegate() {
   # Read agent frontmatter
   read_agent "$agent_file"
 
+  # Resolve harness (CLI override > agent frontmatter > config default > none)
+  local resolved_harness
+  if [[ -n "$harness_override" ]]; then
+    resolved_harness="$harness_override"
+  else
+    resolved_harness="$(resolve_harness "${AGENT_HARNESS:-null}" "$AGENT_PROVIDER")"
+  fi
+
+  # Validate harness tool support for the role
+  if ! validate_role_harness_support "$AGENT_ROLE" "$resolved_harness"; then
+    return 1
+  fi
+
   # Validate agent is active
   if [[ "$AGENT_STATUS" != "active" ]]; then
     log_error "Agent '$agent_name' is not active (status: $AGENT_STATUS)."
@@ -129,10 +142,10 @@ op_delegate() {
   # Load role template
   local role_responsibilities="" role_deliverables="" role_collaborates="" role_handoff_triggers=""
   if [[ -f "$ROLE_TEMPLATES" ]] && command -v jq &>/dev/null; then
-    role_responsibilities="$(jq -r ".role_templates.${AGENT_ROLE}.responsibilities | join(\", \")" "$ROLE_TEMPLATES" 2>/dev/null || echo "")"
-    role_deliverables="$(jq -r ".role_templates.${AGENT_ROLE}.deliverables | join(\", \")" "$ROLE_TEMPLATES" 2>/dev/null || echo "")"
-    role_collaborates="$(jq -r ".role_templates.${AGENT_ROLE}.collaborates_with | join(\", \")" "$ROLE_TEMPLATES" 2>/dev/null || echo "")"
-    role_handoff_triggers="$(jq -r ".role_templates.${AGENT_ROLE}.handoff_triggers | to_entries | map(\"\(.key): \(.value | join(\", \"))\") | join(\"; \")" "$ROLE_TEMPLATES" 2>/dev/null || echo "")"
+    role_responsibilities="$(jq -r ".role_templates[\"${AGENT_ROLE}\"].responsibilities | join(\", \")" "$ROLE_TEMPLATES" 2>/dev/null || echo "")"
+    role_deliverables="$(jq -r ".role_templates[\"${AGENT_ROLE}\"].deliverables | join(\", \")" "$ROLE_TEMPLATES" 2>/dev/null || echo "")"
+    role_collaborates="$(jq -r ".role_templates[\"${AGENT_ROLE}\"].collaborates_with | join(\", \")" "$ROLE_TEMPLATES" 2>/dev/null || echo "")"
+    role_handoff_triggers="$(jq -r ".role_templates[\"${AGENT_ROLE}\"].handoff_triggers | to_entries | map(\"\(.key): \(.value | join(\", \"))\") | join(\"; \")" "$ROLE_TEMPLATES" 2>/dev/null || echo "")"
   fi
 
   # Generate default output file

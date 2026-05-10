@@ -1,12 +1,9 @@
 ---
 name: raj
-description: doc-writer agent (software-house managed)
+description: doc-writer agent
 model: glm-5.1:cloud
 ---
 
-Managed by software-house skill. Canonical definition:
-  /Users/kanganapong.s/Documents/Private/claude-code-skills/software-house-company/SoftwareHouseSkills/.software-house/agents/raj.md
+Canonical definition at: /Users/kanganapong.s/Documents/Private/claude-code-skills/software-house-company/SoftwareHouseSkills/.software-house/agents/raj.md
 
-Role: doc-writer
-Provider: ollama
-Effort: high
+Read that file before responding.

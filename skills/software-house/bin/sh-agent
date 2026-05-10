@@ -186,8 +186,8 @@ main() {
 
   # Build system prompt
   local sys_prompt_file
-  sys_prompt_file="$(mktemp /tmp/sh-agent-sysprompt-XXXXXX.md)"
-  build_system_prompt "$AGENT_NAME" "$agent_file" "${CONTEXT_PAGES[@]}" > "$sys_prompt_file"
+  sys_prompt_file="$(mktemp)"
+  build_system_prompt "$AGENT_NAME" "$agent_file" "${CONTEXT_PAGES[@]:-}" > "$sys_prompt_file"
 
   # Print execution plan
   printf 'sh-agent: executing task for %s\n' "$AGENT_NAME"
@@ -209,20 +209,29 @@ main() {
     exit 0
   fi
 
-  # Execute with fallback
+  # Execute with fallback to a temporary file
   local exit_code=0
+  local raw_output_file
+  raw_output_file="$(mktemp)"
+  
   execute_with_fallback "$AGENT_NAME" "$AGENT_ROLE" "$AGENT_PROVIDER" "$AGENT_MODEL" \
-    "$AGENT_EFFORT_PRESET" "$sys_prompt_file" "$TASK_FILE" "$OUTPUT_FILE" "$resolved_harness" || exit_code=$?
+    "$AGENT_EFFORT_PRESET" "$sys_prompt_file" "$TASK_FILE" "$raw_output_file" "$resolved_harness" || exit_code=$?
 
-  # Clean up temp file
+  # Clean up system prompt temp file
   rm -f "$sys_prompt_file"
 
   if (( exit_code != 0 )); then
+    rm -f "$raw_output_file"
     log_error "Task execution failed for agent '$AGENT_NAME' (exit code: $exit_code)"
     exit $exit_code
   fi
 
-  printf '\nTask completed. Output written to: %s\n' "$OUTPUT_FILE"
+  # Optimize output before saving to final destination
+  log_info "Optimizing output for $AGENT_NAME (Summary Mode)..."
+  optimize_text "$(cat "$raw_output_file")" > "$OUTPUT_FILE"
+  rm -f "$raw_output_file"
+
+  printf '\nTask completed. Optimized output written to: %s\n' "$OUTPUT_FILE"
 
   # Update wiki if requested
   if (( WIKI_UPDATE )); then
@@ -265,11 +274,18 @@ main() {
   mkdir -p "$inbox_dir"
 
   local inbox_file="$inbox_dir/${AGENT_NAME}-task-${ts}.md"
+  
+  log_info "Optimizing task description for inbox..."
+  local raw_task_line
+  raw_task_line=$(head -1 "$TASK_FILE")
+  local optimized_task_line
+  optimized_task_line="$(optimize_text "$raw_task_line")"
+
   cat > "$inbox_file" <<INBOXEOF
 ---
 from: ceo
 to: ${AGENT_NAME}
-task: $(head -1 "$TASK_FILE")
+task: "${optimized_task_line}"
 priority: medium
 context_pages: []
 created_at: $(utc_now)

@@ -161,6 +161,13 @@ op_hire() {
     return 1
   fi
 
+  # Step 5.5: Validate harness tool support for the role
+  local resolved_harness
+  resolved_harness="$(resolve_harness "null" "$provider")"
+  if ! validate_role_harness_support "$role" "$resolved_harness"; then
+    return 1
+  fi
+
   # Step 6: Write canonical agent file
   if dry_run_msg "Would create agent file at $canonical_file"; then
     return 0
