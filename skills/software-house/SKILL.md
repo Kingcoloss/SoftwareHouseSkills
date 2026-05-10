@@ -1,7 +1,52 @@
 ---
 name: software-house
-description: Run the user's computer like a software house company. Manages projects-as-teams and subagents-as-employees with HR operations (hire, fire, transfer, promote, demote, second, disband, onboard, off-board), four-tier org hierarchy (Company → Department → Team → Role), an LLM-Wiki memory system per tier (raw/wiki/index/log), OKR cascade, gamification (XP, achievements, skill tree unlocks), and per-role provider+model+effort selection. Works across Claude Code, OpenAI Codex CLI, and Gemini CLI — same canonical state under ~/.software-house/, harness-specific entry points (SKILL.md, AGENTS.md, GEMINI.md). Agents may use any provider (Ollama, LM Studio, vLLM, llama.cpp, LocalAI, Jan for local; Anthropic, OpenAI, Google, Azure, Bedrock, Groq, Together, Fireworks, DeepSeek, Mistral, Cohere, xAI, Perplexity, OpenRouter, Replicate, HuggingFace, Novita for external). Invoked when the user types `/software-house <command>` or asks about hiring, firing, promoting, transferring, listing, showing the org chart, setting OKRs, or any company-style operation over their projects and agents. Critical guarantee — the skill itself runs entirely on the local machine and never sends data off the user's computer; agents that the user explicitly configures with an external provider may egress only after typed consent recorded in the audit log; destructive operations always require explicit confirmation, even with --dangerously-skip-permissions.
+description: Run your computer like a software house. Projects-as-teams, subagents-as-employees. HR ops (hire, fire, transfer, promote, demote, second, disband, onboard, off-board), 4-tier hierarchy, LLM-Wiki per tier, OKRs, gamification (XP/achievements/skill tree), per-role provider+model+effort. Multi-harness (Claude Code, Codex, Gemini). Local-first; external providers need typed EGRESS-CONSENT; destructive ops need confirmation.
+metadata:
+  short-description: "Manage projects-as-teams and subagents-as-employees with HR ops, OKRs, and gamification"
 ---
+
+<codex_skill_adapter>
+## A. Skill Invocation
+- This skill is invoked by mentioning `$software-house`.
+- Treat all user text after `$software-house` as `{{SH_ARGS}}`.
+- If no arguments are present, show the help summary.
+- Command format: `$software-house <command> [args]` (e.g. `$software-house hire alice --role senior-dev`)
+
+## B. AskUserQuestion → request_user_input Mapping
+This skill uses a canonical text-prompt protocol for confirmations (see `policies/safety.md`).
+Under Codex, the equivalent is `request_user_input` with a single question.
+
+Parameter mapping:
+- `header` → `header`
+- `question` → `question`
+- Options formatted as `"Label" — description` → `{label: "Label", description: "description"}`
+- Generate `id` from header: lowercase, replace spaces with underscores
+
+Multi-select workaround:
+- Codex has no `multiSelect`. Use sequential single-selects, or present a numbered freeform list.
+
+Execute mode fallback:
+- When `request_user_input` is rejected (Execute mode), present a plain-text prompt and pick a safe default (never proceed with a destructive operation without confirmation).
+
+## C. Task() → spawn_agent Mapping
+This skill uses `bin/sh-agent` to delegate tasks to sub-agents with per-role provider/model/effort.
+
+Direct mapping:
+- Task delegation → `spawn_agent(agent_type="software-house-delegate", message="...")`
+- The skill reads `config/models-config.json` for per-role provider/model selection.
+- fork_context: false by default — agents load context from wiki files.
+
+## D. File Operations
+All file operations are local-only (C1). No network calls from the skill itself.
+- Use Read, Write, Edit, Shell for file operations under `~/.software-house/` and project dirs.
+- Shell tool allowlist/denylist per `policies/privacy.md`.
+
+## E. Confirmation Protocol
+Destructive operations (fire, disband, etc.) use a two-step text confirmation:
+1. Print a boxed prompt with the required response token (e.g. "Type FIRE-<name> to confirm")
+2. Wait for user input matching the token exactly.
+This protocol is enforced even with `--dangerously-bypass-approvals-and-sandbox` or `--full-auto`.
+</codex_skill_adapter>
 
 # Software House — Company OS Skill
 
@@ -60,7 +105,8 @@ State lives under `~/.software-house/` (harness-neutral). The same directory is 
 │
 ├── config/
 │   ├── providers.json                  # Provider catalog with egress flags
-│   └── models-config.json              # Defaults_by_role (provider+model+effort)
+│   ├── models-config.json              # Defaults_by_role (provider+model+effort)
+│   └── tools-config.json               # Shared tools + per-role tool declarations
 │
 └── projects-index.json                 # path → team/department mapping
 
@@ -145,6 +191,56 @@ User invokes `/software-house <command> [args]`. Match the command and read the 
 | `okr review [--tier <company\|dept\|team>] [--quarter <YYYY-QN>] [--dept <name>] [--team <name>]` | `operations/okr-review.md` |
 | `award-xp <name> --amount N [--reason "<text>"] [--achievement <name>] [--team <t>]` | `operations/award-xp.md` |
 | `dashboard [--team <t>] [--dept <d>] [--top N]` | `operations/dashboard.md` |
+
+### Phase 5 -- Agile Scrum
+
+| Pattern | Operation file |
+|---|---|
+| `backlog add --title "<text>" [--description "<text>"] [--priority N] [--assignee <name>] [--story-points N] [--type bug\|feature\|task\|spike]` | `operations/backlog-add.md` |
+| `backlog list [--status open\|in-sprint\|closed\|all] [--type <type>] [--assignee <name>]` | `operations/backlog-list.md` |
+| `backlog prioritize --item <id> --priority N` | `operations/backlog-prioritize.md` |
+| `sprint create --name "<text>" --duration <N>w [--goal "<text>"] [--start-date YYYY-MM-DD]` | `operations/sprint-create.md` |
+| `sprint plan --sprint <id> --add <backlog-item-id> [--remove <id>] [--from-plan <plan-id>]` | `operations/sprint-plan.md` |
+| `sprint board [--sprint <id>]` or `sprint board --move <item-id> --to todo\|in-progress\|review\|done` | `operations/sprint-board.md` |
+| `sprint standup --sprint <id> --agent <name> --done "<text>" --doing "<text>" --blockers "<text>"` | `operations/sprint-standup.md` |
+| `sprint review --sprint <id> [--demo "<text>"] [--feedback "<text>"]` | `operations/sprint-review.md` |
+| `sprint retro --sprint <id> --went-well "<text>" --improve "<text>" --action-items "<text>"` | `operations/sprint-retro.md` |
+
+### Phase 6 -- Plan Execution (Auto-spawn)
+
+| Pattern | Operation file |
+|---|---|
+| `plan create --name "<text>" [--sprint <sprint-id>]` | `operations/plan-create.md` |
+| `plan confirm --plan <plan-id>` | `operations/plan-confirm.md` |
+| `plan execute --plan <plan-id> [--max-parallel N]` | `operations/plan-execute.md` |
+| `plan status --plan <plan-id>` | `operations/plan-status.md` |
+| `plan synthesize --plan <plan-id>` | `operations/plan-synthesize.md` |
+
+### Phase 7 -- Sub-Agent Delegation
+
+| Pattern | Operation file |
+|---|---|
+| `delegate <agent-name> <task-description>` | `operations/delegate.md` |
+| `delegate <agent-name> --from-file <path>` | `operations/delegate.md` |
+| `delegate <agent-name> <task> --context <wiki-page>...` | `operations/delegate.md` |
+| `delegate <agent-name> <task> --wiki-update` | `operations/delegate.md` |
+| `delegate <agent-name> <task> --output <path>` | `operations/delegate.md` |
+
+### Phase 8 -- Inter-Agent Handoff
+
+| Pattern | Operation file |
+|---|---|
+| `handoff list [--team <t>] [--status <status>] [--from <agent>] [--to <agent>]` | `operations/handoff.md` |
+| `handoff show <brief-id>` | `operations/handoff.md` |
+| `handoff complete <brief-id> [--summary "<text>"]` | `operations/handoff.md` |
+| `handoff generate <from-agent> <task> [--priority high|medium|low] [--context <page>...]` | `operations/handoff.md` |
+
+### Phase 9 -- Wiki-LLM Enhancement
+
+| Pattern | Operation file |
+|---|---|
+| `wiki-ingest <source-path> [--team <name>] [--type concept\|decision\|synthesis] [--title "<text>"] [--tags <tags>] [--confidence <0.0-1.0>] [--no-compile]` | `operations/wiki-ingest.md` |
+| `wiki-lint [company\|team <name>] [--check <categories>] [--fix-suggestions] [--json]` | `operations/wiki-lint.md` |
 
 ## Default behavior
 

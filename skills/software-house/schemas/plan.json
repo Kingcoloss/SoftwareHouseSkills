@@ -1,0 +1,98 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "PlanFrontmatter",
+  "description": "Validates the YAML frontmatter of plan files ($TEAM_PLANS/<plan-id>/plan.md).",
+  "type": "object",
+  "required": ["type", "id", "name", "status", "created_by", "created_at", "tasks"],
+  "additionalProperties": false,
+  "properties": {
+    "type": {
+      "type": "string",
+      "enum": ["plan"],
+      "description": "Must be 'plan'."
+    },
+    "id": {
+      "type": "string",
+      "pattern": "^plan-\\d{3}$",
+      "description": "Plan ID in plan-NNN format."
+    },
+    "name": {
+      "type": "string",
+      "description": "Plan name or goal description."
+    },
+    "status": {
+      "type": "string",
+      "enum": ["draft", "confirmed", "executing", "completed", "failed"],
+      "description": "Plan lifecycle status."
+    },
+    "created_by": {
+      "type": "string",
+      "description": "Agent name of the tech-lead who created the plan."
+    },
+    "sprint_id": {
+      "type": ["string", "null"],
+      "description": "Optional linked sprint ID. null if not linked."
+    },
+    "created_at": {
+      "type": "string",
+      "format": "date",
+      "description": "Date the plan was created."
+    },
+    "confirmed_at": {
+      "type": ["string", "null"],
+      "format": "date",
+      "description": "Date the plan was confirmed by CEO. null if not yet confirmed."
+    },
+    "completed_at": {
+      "type": ["string", "null"],
+      "format": "date",
+      "description": "Date the plan was completed. null if not yet completed."
+    },
+    "tasks": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "title", "assignee", "role", "dependencies", "status"],
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^task-\\d{3}$",
+            "description": "Task ID in task-NNN format."
+          },
+          "title": {
+            "type": "string",
+            "description": "Short task description."
+          },
+          "description": {
+            "type": ["string", "null"],
+            "description": "Detailed task description. null if same as title."
+          },
+          "assignee": {
+            "type": "string",
+            "description": "Agent name assigned to this task."
+          },
+          "role": {
+            "type": "string",
+            "description": "Role key for the assigned agent."
+          },
+          "dependencies": {
+            "type": "array",
+            "items": { "type": "string" },
+            "description": "List of task IDs this task depends on."
+          },
+          "status": {
+            "type": "string",
+            "enum": ["pending", "running", "done", "failed"],
+            "description": "Task execution status."
+          },
+          "output": {
+            "type": ["string", "null"],
+            "description": "Relative path to the result file (results/<task-id>.md)."
+          }
+        }
+      },
+      "description": "Ordered list of tasks in the plan."
+    }
+  }
+}

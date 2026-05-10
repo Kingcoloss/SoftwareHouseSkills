@@ -29,6 +29,8 @@ Use these names verbatim throughout operation files:
 | `$MODELS_CONFIG` | `~/.software-house/config/models-config.json` |
 | `$PROVIDERS_LOCAL` | `~/.software-house/config/providers.local.json` (user overlay, never overwritten) |
 | `$MODELS_LOCAL` | `~/.software-house/config/models-config.local.json` (user overlay, never overwritten) |
+| `$TOOLS_CONFIG` | `~/.software-house/config/tools-config.json` |
+| `$TOOLS_LOCAL` | `~/.software-house/config/tools-config.local.json` (user overlay, never overwritten) |
 
 Per-project (team-scoped), given the current project root `$PROJECT`:
 
@@ -40,6 +42,9 @@ Per-project (team-scoped), given the current project root `$PROJECT`:
 | `$TEAM_AUDIT` | `$PROJECT/.software-house/team/audit.log` |
 | `$TEAM_ROSTER` | `$PROJECT/.software-house/team/wiki/roster.md` |
 | `$TEAM_TRANSFERS` | `$PROJECT/.software-house/team/transfers.log` |
+| `$TEAM_SPRINTS` | `$PROJECT/.software-house/team/sprints` |
+| `$TEAM_BACKLOG` | `$PROJECT/.software-house/team/backlog.md` |
+| `$TEAM_PLANS` | `$PROJECT/.software-house/team/plans` |
 
 Always expand `~` to `$HOME` in shell commands. Never write a literal `~` into a file.
 
@@ -115,20 +120,28 @@ egress_consent: none                    # none | external:<utc-date-token-was-gi
 employee_id: emp-001
 team: <team-name>                       # null for outsource
 department: <dept-name>                 # null for outsource
-role: <role-key>                        # matches a key in models-config.json defaults_by_role
+role: <role-key>                        # matches a key in models-config.json defaults_by_role (default, tech-lead, system-architect, code-reviewer, backend-dev, frontend-dev, doc-writer, linter, test-runner, researcher, business-analyst)
 position: <human-readable>
 reports_to: <name | null>
 status: active                          # onboarding | active | transfer | alumni | freelance
 hired_at: 2026-05-02
 level: 1
 xp: 0
-effort_preset: medium                   # low | medium | high
+effort_preset: medium                   # low | medium | high | xhigh
 classification: internal                # public | internal | confidential | restricted
 buddy: <name | null>
 employment: permanent                   # permanent | freelance
 hired_by_teams: []                      # for freelance only
 secondary_teams: []                     # for matrix assignment (second.md)
 achievements: []
+responsibilities: []                   # populated from role-templates.json at hire time
+deliverables: []                       # populated from role-templates.json at hire time
+collaborates_with: []                  # role keys this agent works with regularly
+handoff_triggers: {}                   # event -> [role-keys] mapping for inter-agent handoffs
+confidence: 1.0                         # 0.0-1.0 wiki confidence score (Karpathy pattern)
+lifecycle: draft                       # draft | reviewed | verified | stale | archived
+last_compiled: null                     # YYYY-MM-DD when LLM last compiled this page
+source_refs: []                        # paths to raw/ source documents
 contract_type: null                     # retainer | hourly | project (freelance only)
 contract_start: null                    # YYYY-MM-DD (freelance only)
 contract_end: null                      # YYYY-MM-DD | null (freelance only)
@@ -265,3 +278,274 @@ The skill ships a `VERSION` file containing the current semver (e.g. `0.4.0`). `
 - **Downgrade**: warns and requires confirmation before proceeding.
 
 Migrations are shell scripts in `migrations/NNN-<name>.sh`, run in sort order on version change. See `migrations/README.md` for the migration contract.
+
+## 16. Tools configuration
+
+Agent tool access is configured in `$TOOLS_CONFIG` (`~/.software-house/config/tools-config.json`). The config has three sections:
+
+1. **`canonical_tools`** -- Maps harness-agnostic tool names to harness-specific names. Each key is a canonical name (e.g., `read`, `agent`, `web-search`). Each value maps to `claude-code`, `codex`, and `gemini` tool names. A `null` value means that harness does not support the tool.
+
+2. **`shared_tools`** -- An array of canonical tool names that EVERY agent receives, regardless of role. Currently: `["read", "write", "edit", "bash", "glob", "grep"]`.
+
+3. **`role_tools`** -- Per-role additional tools. Each key matches a `defaults_by_role` key from `$MODELS_CONFIG`. The value is an array of canonical tool names beyond the shared set. Roles with `agent` access can spawn sub-agents (used by `plan execute`).
+
+### Tool resolution at hire time
+
+When an agent is hired, its `tools` frontmatter field is populated by combining `shared_tools` + `role_tools[role]` from `$TOOLS_CONFIG`. For example, a `researcher` agent gets:
+
+```
+tools: [read, write, edit, bash, glob, grep, web-search, web-fetch]
+```
+
+A `tech-lead` agent gets:
+
+```
+tools: [read, write, edit, bash, glob, grep, agent]
+```
+
+### Harness adapter translation
+
+When writing adapter files, canonical tool names are translated to harness-specific names using the `canonical_tools` mapping. For example, `agent` maps to `Agent` in Claude Code but is `null` (unsupported) in Codex and Gemini -- agents with `agent` in their tools can only spawn sub-agents on Claude Code.
+
+### Config overlay
+
+As with `$MODELS_CONFIG`, the `tools-config.json` has a `.local.json` overlay at `$TOOLS_LOCAL` (`~/.software-house/config/tools-config.local.json`). User customizations (additional tools, role overrides) go here and are never overwritten by `install.sh`.
+
+### Path constants
+
+| Symbol | Path |
+|---|---|
+| `$TOOLS_CONFIG` | `~/.software-house/config/tools-config.json` |
+| `$TOOLS_LOCAL` | `~/.software-house/config/tools-config.local.json` (user overlay, never overwritten) |
+| `$ROLE_TEMPLATES` | `~/.software-house/config/role-templates.json` |
+| `$WIKI_CONCEPTS` | `~/.software-house/company/wiki/concepts` |
+| `$WIKI_DECISIONS` | `~/.software-house/company/wiki/decisions` |
+| `$WIKI_SYNTHESIS` | `~/.software-house/company/wiki/synthesis` |
+| `$WIKI_HANDOFFS` | `~/.software-house/company/wiki/handoffs` |
+| `$WIKI_HANDOFF_INBOX` | `~/.software-house/company/wiki/handoffs/inbox` |
+| `$WIKI_HANDOFF_COMPLETED` | `~/.software-house/company/wiki/handoffs/completed` |
+| `$WIKI_HANDOFF_BRIEFS` | `~/.software-house/company/wiki/handoffs/briefs` |
+| `$WIKI_LOG` | `~/.software-house/company/wiki/log.md` |
+| `$RAW_DIR` | `~/.software-house/company/raw` |
+
+## 17. Sprint and Backlog data structures
+
+### Sprint directory
+
+Each sprint lives under `$TEAM_SPRINTS/<sprint-id>/` (e.g., `sprint-001/`):
+
+| File | Purpose |
+|---|---|
+| `sprint.md` | Sprint frontmatter (id, name, goal, start_date, end_date, status, plan_id) + body with goal and board summary |
+| `board.md` | Current sprint board state -- markdown table with columns: Todo, In Progress, Review, Done |
+| `standups.md` | Chronological standup notes (append-only) |
+| `review.md` | Sprint review / demo notes |
+| `retro.md` | Retrospective notes |
+
+Sprint IDs are auto-incremented: `sprint-001`, `sprint-002`, etc. The `next_sprint_id()` helper scans `$TEAM_SPRINTS/` for the highest existing ID and increments.
+
+### Backlog file
+
+The product backlog lives at `$TEAM_BACKLOG` (`$TEAM_DIR/backlog.md`). It uses YAML frontmatter with a `next_id` counter and a markdown table body:
+
+```yaml
+---
+type: product-backlog
+team: <team-name>
+created_at: YYYY-MM-DD
+next_id: 1
+---
+
+# Product Backlog
+
+| ID | Title | Type | Priority | Points | Assignee | Status | Sprint |
+|---|---|---|---|---|---|---|---|
+```
+
+Each backlog item has an `item-NNN` ID (auto-incremented from `next_id`). The `Sprint` column is empty when the item is in the backlog, or `sprint-NNN` when pulled into a sprint.
+
+### Board columns
+
+Sprint board items move through four columns:
+
+| Column | Meaning |
+|---|---|
+| `todo` | Item is in the sprint but not yet started |
+| `in-progress` | Item is being actively worked on |
+| `review` | Item is under review (code review, QA) |
+| `done` | Item is completed |
+
+### Sprint lifecycle
+
+| Status | Meaning |
+|---|---|
+| `planning` | Sprint created but not yet started |
+| `active` | Sprint is in progress |
+| `review` | Sprint review phase |
+| `closed` | Sprint is complete |
+
+## 18. Plan data structures
+
+### Plan directory
+
+Each plan lives under `$TEAM_PLANS/<plan-id>/` (e.g., `plan-001/`):
+
+| File | Purpose |
+|---|---|
+| `plan.md` | Plan frontmatter (type, id, name, status, created_by, tasks array, sprint_id) + body with goal and task table |
+| `status.md` | Execution status tracking -- which tasks are pending/running/done/failed |
+| `results/` | Directory containing `<task-id>.md` output files from each sub-agent |
+| `synthesis.md` | Tech-lead's synthesis of all completed task results |
+
+Plan IDs are auto-incremented: `plan-001`, `plan-002`, etc. Task IDs within a plan are `task-NNN` (local to each plan).
+
+### Plan lifecycle
+
+| Status | Meaning |
+|---|---|
+| `draft` | Plan created but not yet confirmed |
+| `confirmed` | CEO has reviewed and approved the plan |
+| `executing` | Sub-agents are being spawned and tasks are running |
+| `completed` | All tasks have completed successfully |
+| `failed` | One or more tasks failed, blocking dependent tasks |
+
+### Task status
+
+| Status | Meaning |
+|---|---|
+| `pending` | Task not yet started |
+| `running` | Sub-agent is working on this task |
+| `done` | Task completed, result file exists |
+| `failed` | Task failed, result file contains error details |
+
+### Sub-agent spawning protocol (plan execute)
+
+When `plan execute` spawns sub-agents:
+
+1. The skill reads each task's `assignee` and `role` from the plan.
+2. It looks up the agent's canonical file to find its `tools` frontmatter field.
+3. The `tools` list is resolved from `shared_tools + role_tools[role]` via `$TOOLS_CONFIG`.
+4. The sub-agent is spawned with a prompt containing: task description, output file path, tools constraint.
+5. On Claude Code: uses the `Agent` tool. On Codex/Gemini: prints manual dispatch instructions.
+
+The sub-agent writes its results to `<plan-dir>/results/<task-id>.md` with a completion marker `--- completed: true ---` at the end.
+
+### Linking plans to sprints
+
+A plan can be linked to a sprint via the `--sprint` flag on `plan create`. This sets `plan_id` in the sprint frontmatter and `sprint_id` in the plan frontmatter. When `sprint plan --from-plan <plan-id>` is used, the sprint board is auto-populated from the plan's task list.
+
+## 19. Wiki-LLM conventions (Karpathy pattern)
+
+The company wiki follows the "compile, don't re-derive" pattern (Karpathy, April 2026). Wiki pages are **compiled knowledge** -- LLM-generated structured pages derived from raw sources, not raw notes.
+
+### Directory structure
+
+```
+~/.software-house/company/wiki/
+  people/          # Agent wiki pages (per person)
+  teams/           # Team wiki pages
+  departments/     # Department wiki pages
+  synthesis/       # Cross-cutting synthesis pages (project status, etc.)
+  concepts/        # Concept pages (architectural concepts, patterns)
+  decisions/       # Architecture Decision Records (ADRs)
+  handoffs/
+    inbox/         # Tasks waiting to be picked up by agents
+    completed/     # Completed handoffs (moved after processing)
+    briefs/        # Handoff briefs generated by agents
+```
+
+Per-project:
+```
+<project>/.software-house/team/wiki/
+  roster.md        # Team roster
+  people/          # Per-person pages (same frontmatter as company wiki)
+  decisions/       # Project-level ADRs
+  synthesis/       # Project synthesis pages
+  handoffs/
+    inbox/
+    completed/
+    briefs/
+```
+
+### Wikilink conventions
+
+All wiki pages should use `[[page-name]]` wikilinks for cross-references. This makes the wiki compatible with Obsidian's graph view and backlink system:
+
+- Person pages link to team pages: `Currently on [[development-team]]`
+- Team pages link to members: `Members: [[tony]], [[alice]], ...`
+- Decision pages link to people and concepts: `Proposed by [[tony]], affects [[api-design]]`
+- Synthesis pages link to decisions: `See [[adr-001-provider-fallback]]`
+
+When rebuilding `index.md`, include wikilinks in the entry descriptions.
+
+### Confidence and lifecycle
+
+Every wiki page (including person pages) has these frontmatter fields:
+
+| Field | Type | Values | Purpose |
+|---|---|---|---|
+| `confidence` | float | 0.0-1.0 | How confident we are in this page's content. New pages start at 1.0, pages compiled from sources start at 0.7 |
+| `lifecycle` | enum | draft, reviewed, verified, stale, archived | Knowledge maturity. `draft` = LLM-compiled but unreviewed; `reviewed` = CEO reviewed; `verified` = cross-validated; `stale` = older than 30 days; `archived` = superseded |
+| `last_compiled` | date | YYYY-MM-DD or null | When the LLM last compiled/updated this page |
+| `source_refs` | array | paths to raw/ docs | Which source documents this page was derived from |
+
+### Raw sources
+
+The `$RAW_DIR` (`~/.software-house/company/raw/`) stores immutable source documents. When a source is ingested via `wiki-ingest`, the original is copied here with a timestamp prefix. Source files are never modified -- they serve as the audit trail for compiled wiki pages.
+
+### Handoff brief format
+
+Each handoff brief in `$WIKI_HANDOFF_BRIEFS/` is a markdown file with frontmatter:
+
+```yaml
+---
+from: <agent-name>
+to: <agent-name>
+task: <original task description>
+priority: high | medium | low
+context_pages: [wiki/pages/to/read]
+created_at: <utc-timestamp>
+status: pending | in-progress | done
+---
+```
+
+Body contains: summary of what's being handed off, specific deliverable expected, relevant context excerpted from wiki, and dependencies on other handoffs.
+
+### Wiki log
+
+`$WIKI_LOG` (`~/.software-house/company/wiki/log.md`) is an append-only markdown log of wiki operations:
+
+```markdown
+- 2026-05-06T10:30:00Z | wiki-ingest | raw/meeting-notes-2026-05-06.md -> concepts/auth-pattern.md, decisions/adr-003.md
+- 2026-05-06T11:00:00Z | wiki-lint | 3 broken wikilinks found, 2 orphan pages flagged
+```
+
+Each entry has: timestamp, operation, and a human-readable summary of what changed.
+
+## 20. Role templates and delegation
+
+### Role templates
+
+`$ROLE_TEMPLATES` (`~/.software-house/config/role-templates.json`) contains structured role definitions with:
+
+- `title`: Human-readable position title
+- `summary`: One-line role description
+- `responsibilities`: List of duty descriptions
+- `deliverables`: List of expected output types
+- `collaborates_with`: List of role keys this role regularly works with
+- `escalates_to`: List of roles/identifiers this role escalates blockers to
+- `handoff_triggers`: Map of event types to arrays of role keys that should receive a brief
+
+When an agent is hired, the role template is loaded and its fields are written into the agent's canonical file and wiki page. The `hire` operation presents the template for CEO confirmation or customization.
+
+### Provider fallback
+
+When a local provider (Ollama, LM Studio, vLLM) is unavailable, the system falls back to Claude models based on role complexity. The fallback mapping is defined in `models-config.json` under `fallback_external`:
+
+| Role complexity | Default local | Fallback Claude | Fallback effort |
+|---|---|---|---|
+| High (tech-lead, system-architect) | deepseek-v3:671b | claude-opus-4-7 | xhigh |
+| Medium (backend-dev, frontend-dev, code-reviewer, researcher, business-analyst) | qwen3-coder:32b | claude-sonnet-4-6 | high |
+| Low (linter, test-runner, doc-writer) | qwen3-coder:7b/14b | claude-haiku-4-5 | high |
+
+Fallback to an external provider requires egress consent per `policies/safety.md` section 1 (special tier). The audit log records the fallback event with both the failed provider and the fallback model.

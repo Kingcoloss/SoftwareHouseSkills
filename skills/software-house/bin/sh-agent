@@ -1,0 +1,301 @@
+#!/usr/bin/env bash
+# sh-agent -- CLI sub-agent executor for the software-house skill
+#
+# Usage:
+#   sh-agent <agent-name> <task-prompt-file> [--output <path>] [--wiki-update] [--context <page>...]
+#
+# Reads the agent's canonical file and wiki page to build a system prompt,
+# then executes via the configured provider (ollama, lmstudio, vllm, anthropic, etc.).
+# If the primary provider is unavailable, falls back to Claude models per role complexity.
+#
+# Flow:
+#   1. Read agent canonical file -> get provider, model, role
+#   2. Read agent wiki page -> get responsibilities, experience, notes
+#   3. Read project-status wiki page -> get current context
+#   4. Read relevant wiki pages based on handoff_triggers
+#   5. Construct system prompt from wiki context + role template
+#   6. Construct user prompt from task-prompt-file
+#   7. Execute via provider adapter (with fallback)
+#   8. Capture output to --output file (default: wiki/handoffs/<agent>-output-<ts>.md)
+#   9. If --wiki-update: append summary to agent's wiki page Notes section
+
+set -euo pipefail
+
+# Resolve script directory and source shared libraries
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+SKILL_SRC="$(cd "$SCRIPT_DIR/.." && pwd)"
+LIB_DIR="$SKILL_SRC/lib"
+
+source "$LIB_DIR/_shared.sh"
+source "$LIB_DIR/providers/_shared.sh"
+
+# ---------------------------------------------------------------------------
+# Usage
+# ---------------------------------------------------------------------------
+show_usage() {
+  cat <<'USAGEEOF'
+sh-agent -- CLI sub-agent executor for software-house
+
+Usage:
+  sh-agent <agent-name> <task-prompt-file> [options]
+
+Arguments:
+  agent-name          Agent name (must match ^[a-z][a-z0-9-]{0,63}$)
+  task-prompt-file    Path to a file containing the task prompt
+
+Options:
+  --output <path>     Path to write output (default: auto-generated in handoffs/)
+  --wiki-update       Append result summary to agent's wiki page Notes section
+  --context <page>    Additional wiki page paths to include in system prompt
+                      (can be specified multiple times)
+  --dry-run           Show what would be done without executing
+  --harness <value>   Override harness routing (beats agent.harness frontmatter)
+  --help              Show this help message
+
+Examples:
+  sh-agent tony task-prompts/review-api.md
+  sh-agent alice task-prompts/implement-auth.md --output results/auth.md
+  sh-agent tony task-prompts/review.md --wiki-update --context wiki/decisions/adr-001.md
+USAGEEOF
+}
+
+# ---------------------------------------------------------------------------
+# Parse arguments
+# ---------------------------------------------------------------------------
+AGENT_NAME=""
+TASK_FILE=""
+OUTPUT_FILE=""
+WIKI_UPDATE=0
+CONTEXT_PAGES=()
+DRY_RUN_AGENT=0
+HARNESS_OVERRIDE=""
+
+parse_args() {
+  if (( $# < 2 )); then
+    show_usage >&2
+    exit 1
+  fi
+
+  AGENT_NAME="$1"; shift
+  TASK_FILE="$1"; shift
+
+  # Validate agent name
+  if ! validate_name "$AGENT_NAME"; then
+    exit 1
+  fi
+
+  # Validate task file
+  if [[ ! -f "$TASK_FILE" ]]; then
+    log_error "Task prompt file not found: $TASK_FILE"
+    exit 1
+  fi
+
+  while (( $# > 0 )); do
+    case "$1" in
+      --output)
+        OUTPUT_FILE="$2"; shift 2
+        ;;
+      --wiki-update)
+        WIKI_UPDATE=1; shift
+        ;;
+      --context)
+        CONTEXT_PAGES+=("$2"); shift 2
+        ;;
+      --dry-run)
+        DRY_RUN_AGENT=1; shift
+        ;;
+      --harness)
+        HARNESS_OVERRIDE="$2"; shift 2
+        ;;
+      --help|-h)
+        show_usage
+        exit 0
+        ;;
+      *)
+        log_error "Unknown option: $1"
+        show_usage >&2
+        exit 1
+        ;;
+    esac
+  done
+}
+
+# ---------------------------------------------------------------------------
+# Main
+# ---------------------------------------------------------------------------
+main() {
+  parse_args "$@"
+
+  # Ensure company is initialized
+  if ! require_company_init; then
+    exit 1
+  fi
+
+  # Load config
+  load_config
+
+  # Find agent file
+  local agent_file
+  if ! agent_file="$(find_agent_file "$AGENT_NAME")"; then
+    log_error "Agent '$AGENT_NAME' not found. Check the name and try again."
+    log_error "Searched: \$TEAM_AGENTS/$AGENT_NAME.md, \$AGENTS_GLOBAL/$AGENT_NAME.md"
+    exit 1
+  fi
+
+  # Read agent frontmatter
+  read_agent "$agent_file"
+
+  # Resolve harness (CLI override > agent frontmatter > config default > none)
+  local resolved_harness
+  if [[ -n "$HARNESS_OVERRIDE" ]]; then
+    resolved_harness="$HARNESS_OVERRIDE"
+  else
+    resolved_harness="$(resolve_harness "${AGENT_HARNESS:-null}" "$AGENT_PROVIDER")"
+  fi
+
+  if [[ -n "$resolved_harness" ]]; then
+    if ! is_valid_harness "$resolved_harness" "$AGENT_PROVIDER"; then
+      log_error "Invalid harness '$resolved_harness' for provider '$AGENT_PROVIDER' (e.g. ollama:gemini is not supported)."
+      exit 1
+    fi
+    if ! detect_harness_cli "$resolved_harness"; then
+      log_warn "Harness '$resolved_harness' CLI not on PATH; will fall through to direct provider."
+    fi
+  fi
+
+  # Verify agent is active
+  if [[ "$AGENT_STATUS" != "active" ]]; then
+    log_error "Agent '$AGENT_NAME' is not active (status: $AGENT_STATUS). Only active agents can receive tasks."
+    exit 1
+  fi
+
+  # Generate default output file if not specified
+  local ts
+  ts="$(utc_timestamp_compact)"
+  if [[ -z "$OUTPUT_FILE" ]]; then
+    # Use per-project handoffs if in a project context, otherwise company handoffs
+    if [[ -n "${TEAM_DIR:-}" && -d "$TEAM_DIR" ]]; then
+      OUTPUT_FILE="$TEAM_DIR/wiki/handoffs/${AGENT_NAME}-output-${ts}.md"
+    else
+      OUTPUT_FILE="$WIKI_HANDOFFS/${AGENT_NAME}-output-${ts}.md"
+    fi
+  fi
+
+  # Ensure output directory exists
+  mkdir -p "$(dirname "$OUTPUT_FILE")"
+
+  # Build system prompt
+  local sys_prompt_file
+  sys_prompt_file="$(mktemp /tmp/sh-agent-sysprompt-XXXXXX.md)"
+  build_system_prompt "$AGENT_NAME" "$agent_file" "${CONTEXT_PAGES[@]}" > "$sys_prompt_file"
+
+  # Print execution plan
+  printf 'sh-agent: executing task for %s\n' "$AGENT_NAME"
+  printf '  Role:       %s\n' "$AGENT_ROLE"
+  printf '  Provider:   %s\n' "$AGENT_PROVIDER"
+  printf '  Model:      %s\n' "$AGENT_MODEL"
+  printf '  Effort:     %s\n' "$AGENT_EFFORT_PRESET"
+  printf '  Harness:    %s\n' "${resolved_harness:-(direct)}"
+  printf '  Task file:  %s\n' "$TASK_FILE"
+  printf '  Output:     %s\n' "$OUTPUT_FILE"
+  printf '  Wiki update: %s\n' "$([ $WIKI_UPDATE -eq 1 ] && echo 'yes' || echo 'no')"
+
+  if (( DRY_RUN_AGENT )); then
+    printf '\n[DRY-RUN] Would execute task with the above configuration.\n'
+    printf '[DRY-RUN] Harness:         %s\n' "${resolved_harness:-(direct)}"
+    printf '[DRY-RUN] System prompt written to: %s\n' "$sys_prompt_file"
+    printf '[DRY-RUN] User prompt file: %s\n' "$TASK_FILE"
+    rm -f "$sys_prompt_file"
+    exit 0
+  fi
+
+  # Execute with fallback
+  local exit_code=0
+  execute_with_fallback "$AGENT_NAME" "$AGENT_ROLE" "$AGENT_PROVIDER" "$AGENT_MODEL" \
+    "$AGENT_EFFORT_PRESET" "$sys_prompt_file" "$TASK_FILE" "$OUTPUT_FILE" "$resolved_harness" || exit_code=$?
+
+  # Clean up temp file
+  rm -f "$sys_prompt_file"
+
+  if (( exit_code != 0 )); then
+    log_error "Task execution failed for agent '$AGENT_NAME' (exit code: $exit_code)"
+    exit $exit_code
+  fi
+
+  printf '\nTask completed. Output written to: %s\n' "$OUTPUT_FILE"
+
+  # Update wiki if requested
+  if (( WIKI_UPDATE )); then
+    local wiki_file="$WIKI_PEOPLE/${AGENT_NAME}.md"
+    if [[ -f "$wiki_file" ]]; then
+      local result_summary
+      result_summary="$(head -20 "$OUTPUT_FILE" | sed 's/^/  /')"
+
+      # Append to Notes section in wiki page
+      local note_ts
+      note_ts="$(utc_now)"
+      local note_entry="- ${note_ts}: Task completed. Output: ${OUTPUT_FILE}\n${result_summary}"
+
+      # Find the Notes section and append after it
+      if grep -q "^## Notes" "$wiki_file"; then
+        local tmp_wiki="${wiki_file}.tmp"
+        awk -v note="$note_entry" '
+          /^## Notes/ { print; getline; print note; print; next }
+          { print }
+        ' "$wiki_file" > "$tmp_wiki"
+        mv "$tmp_wiki" "$wiki_file"
+        log_info "Wiki page updated for $AGENT_NAME"
+      else
+        # No Notes section -- append at end
+        printf '\n## Notes\n\n%s\n' "$note_entry" >> "$wiki_file"
+        log_info "Wiki page updated for $AGENT_NAME (added Notes section)"
+      fi
+    else
+      log_warn "Wiki page not found for $AGENT_NAME at $wiki_file"
+    fi
+  fi
+
+  # Write handoff inbox entry
+  local inbox_dir
+  if [[ -n "${TEAM_DIR:-}" && -d "$TEAM_DIR" ]]; then
+    inbox_dir="$TEAM_DIR/wiki/handoffs/inbox"
+  else
+    inbox_dir="$WIKI_HANDOFF_INBOX"
+  fi
+  mkdir -p "$inbox_dir"
+
+  local inbox_file="$inbox_dir/${AGENT_NAME}-task-${ts}.md"
+  cat > "$inbox_file" <<INBOXEOF
+---
+from: ceo
+to: ${AGENT_NAME}
+task: $(head -1 "$TASK_FILE")
+priority: medium
+context_pages: []
+created_at: $(utc_now)
+status: in-progress
+output: ${OUTPUT_FILE}
+---
+
+# Task from CEO
+
+$(cat "$TASK_FILE")
+INBOXEOF
+
+  log_info "Task entry written to $inbox_file"
+
+  # Audit log
+  local audit_entry
+  audit_entry="$(json_build \
+    "ts" "$(json_str "$(utc_now)")" \
+    "actor" "$(json_str "user")" \
+    "op" "$(json_str "delegate")" \
+    "scope" "$(json_str "agent:${AGENT_NAME}")" \
+    "args" "{\"agent\":\"${AGENT_NAME}\",\"role\":\"${AGENT_ROLE}\",\"provider\":\"${AGENT_PROVIDER}\",\"model\":\"${AGENT_MODEL}\",\"effort\":\"${AGENT_EFFORT_PRESET}\",\"harness\":\"${resolved_harness}\",\"output\":\"${OUTPUT_FILE}\",\"wiki_update\":${WIKI_UPDATE}}" \
+    "diff" "{\"created\":[\"${OUTPUT_FILE}\",\"${inbox_file}\"]}" \
+    "result" "$(json_str "ok")" \
+  )"
+  audit_log "$audit_entry"
+}
+
+main "$@"

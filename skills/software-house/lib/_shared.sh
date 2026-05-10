@@ -17,12 +17,38 @@ set -euo pipefail
 : "${WIKI_PEOPLE:=$COMPANY_HOME/wiki/people}"
 : "${WIKI_TEAMS:=$COMPANY_HOME/wiki/teams}"
 : "${WIKI_DEPTS:=$COMPANY_HOME/wiki/departments}"
+: "${WIKI_CONCEPTS:=$COMPANY_HOME/wiki/concepts}"
+: "${WIKI_DECISIONS:=$COMPANY_HOME/wiki/decisions}"
+: "${WIKI_SYNTHESIS:=$COMPANY_HOME/wiki/synthesis}"
+: "${WIKI_HANDOFFS:=$COMPANY_HOME/wiki/handoffs}"
+: "${WIKI_HANDOFF_INBOX:=$COMPANY_HOME/wiki/handoffs/inbox}"
+: "${WIKI_HANDOFF_COMPLETED:=$COMPANY_HOME/wiki/handoffs/completed}"
+: "${WIKI_HANDOFF_BRIEFS:=$COMPANY_HOME/wiki/handoffs/briefs}"
+: "${WIKI_LOG:=$COMPANY_HOME/wiki/log.md}"
+: "${RAW_DIR:=$COMPANY_HOME/raw}"
 : "${ALUMNI:=$COMPANY_HOME/alumni}"
 : "${OUTSOURCE_MANIFEST:=$COMPANY_HOME/outsource/manifest.json}"
 : "${PROJECTS_INDEX:=$SH_HOME/projects-index.json}"
 : "${CONFIG_HOME:=$SH_HOME/config}"
 : "${PROVIDERS_CONFIG:=$CONFIG_HOME/providers.json}"
 : "${MODELS_CONFIG:=$CONFIG_HOME/models-config.json}"
+: "${TOOLS_CONFIG:=$CONFIG_HOME/tools-config.json}"
+: "${TOOLS_LOCAL:=$CONFIG_HOME/tools-config.local.json}"
+
+# Per-team paths (resolved at runtime based on PROJECT)
+: "${TEAM_DIR:=$PROJECT/.software-house/team}"
+: "${TEAM_SPRINTS:=$TEAM_DIR/sprints}"
+: "${TEAM_BACKLOG:=$TEAM_DIR/backlog.md}"
+: "${TEAM_PLANS:=$TEAM_DIR/plans}"
+: "${TEAM_WIKI_PEOPLE:=$TEAM_DIR/wiki/people}"
+: "${TEAM_WIKI_DECISIONS:=$TEAM_DIR/wiki/decisions}"
+: "${TEAM_WIKI_SYNTHESIS:=$TEAM_DIR/wiki/synthesis}"
+: "${TEAM_WIKI_HANDOFFS:=$TEAM_DIR/wiki/handoffs}"
+: "${TEAM_WIKI_HANDOFF_INBOX:=$TEAM_DIR/wiki/handoffs/inbox}"
+: "${TEAM_WIKI_HANDOFF_COMPLETED:=$TEAM_DIR/wiki/handoffs/completed}"
+: "${TEAM_WIKI_HANDOFF_BRIEFS:=$TEAM_DIR/wiki/handoffs/briefs}"
+: "${TEAM_WIKI_LOG:=$TEAM_DIR/wiki/log.md}"
+: "${TEAM_RAW_DIR:=$TEAM_DIR/raw}"
 
 # Skill source directory (where this file lives)
 SKILL_SRC="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -265,6 +291,7 @@ read_agent() {
   AGENT_ONBOARD_STATUS="$(echo "$fm_content" | grep '^onboard_status:' | head -1 | sed 's/^onboard_status:[[:space:]]*//' || echo "null")"
   AGENT_SECONDARY_TEAMS="$(echo "$fm_content" | grep '^secondary_teams:' | head -1 | sed 's/^secondary_teams:[[:space:]]*//' || echo "[]")"
   AGENT_UPDATED_AT="$(echo "$fm_content" | grep '^updated_at:' | head -1 | sed 's/^updated_at:[[:space:]]*//' || echo "null")"
+  AGENT_HARNESS="$(echo "$fm_content" | grep '^harness:' | head -1 | sed 's/^harness:[[:space:]]*//' || echo "null")"
 }
 
 # Write a YAML frontmatter field update using sed.
@@ -515,6 +542,142 @@ load_config() {
 }
 
 # ---------------------------------------------------------------------------
+# Tools configuration (mirrors _shared.md section 16)
+# ---------------------------------------------------------------------------
+
+# Load tools config (base + local overlay).
+TOOLS_JSON=""
+load_tools() {
+  if [[ ! -f "$TOOLS_CONFIG" ]]; then
+    log_error "tools-config.json not found at $TOOLS_CONFIG"
+    return 1
+  fi
+  if command -v jq &>/dev/null; then
+    TOOLS_JSON="$(cat "$TOOLS_CONFIG")"
+    if [[ -f "$TOOLS_LOCAL" ]]; then
+      # Merge overlay on top of base
+      local overlay
+      overlay="$(cat "$TOOLS_LOCAL")"
+      # Merge shared_tools and role_tools from overlay
+      local shared_base shared_overlay shared_merged
+      shared_base="$(echo "$TOOLS_JSON" | jq -c '.shared_tools // []')"
+      shared_overlay="$(echo "$overlay" | jq -c '.shared_tools // []')"
+      shared_merged="$(echo "$shared_base $shared_overlay" | jq -s '.[0] + .[1] | unique')"
+      local role_base role_overlay role_merged
+      role_base="$(echo "$TOOLS_JSON" | jq -c '.role_tools // {}')"
+      role_overlay="$(echo "$overlay" | jq -c '.role_tools // {}')"
+      role_merged="$(echo "$role_base" | jq -c --argjson overlay "$role_overlay" '. * $overlay')"
+      TOOLS_JSON="$(echo "$TOOLS_JSON" | jq -c --argjson shared "$shared_merged" --argjson roles "$role_merged" '.shared_tools = $shared | .role_tools = $roles')"
+    fi
+  else
+    TOOLS_JSON="$(cat "$TOOLS_CONFIG")"
+  fi
+}
+
+# Get shared tools array (prints one tool per line).
+get_shared_tools() {
+  if [[ -z "$TOOLS_JSON" ]]; then
+    load_tools
+  fi
+  if command -v jq &>/dev/null; then
+    echo "$TOOLS_JSON" | jq -r '.shared_tools[]' 2>/dev/null
+  else
+    grep -A100 '"shared_tools"' "$TOOLS_CONFIG" 2>/dev/null | grep '"[a-z-]*"' | sed 's/.*"\([a-z-]*\)".*/\1/'
+  fi
+}
+
+# Get role-specific tools array (prints one tool per line).
+# get_role_tools <role-key>
+get_role_tools() {
+  local role="$1"
+  if [[ -z "$TOOLS_JSON" ]]; then
+    load_tools
+  fi
+  if command -v jq &>/dev/null; then
+    echo "$TOOLS_JSON" | jq -r ".role_tools.${role}[] // empty" 2>/dev/null
+  else
+    grep -A5 "\"${role}\"" "$TOOLS_CONFIG" 2>/dev/null | grep '"[a-z-]*"' | sed 's/.*"\([a-z-]*\)".*/\1/'
+  fi
+}
+
+# Resolve full tool list for a role (shared + role-specific, deduplicated).
+# resolve_agent_tools <role-key>
+# Prints: comma-separated canonical tool names
+resolve_agent_tools() {
+  local role="$1"
+  local tools=""
+  # Start with shared tools
+  tools="$(get_shared_tools | tr '\n' ',' | sed 's/,$//')"
+  # Add role-specific tools
+  local role_tools
+  role_tools="$(get_role_tools "$role" | tr '\n' ',' | sed 's/,$//')"
+  if [[ -n "$role_tools" ]]; then
+    if [[ -n "$tools" ]]; then
+      tools="${tools},${role_tools}"
+    else
+      tools="$role_tools"
+    fi
+  fi
+  # Deduplicate while preserving order
+  local seen="" result=""
+  IFS=',' read -ra arr <<< "$tools"
+  for t in "${arr[@]}"; do
+    if [[ -n "$t" ]] && ! echo "$seen" | grep -qw "$t"; then
+      if [[ -n "$result" ]]; then
+        result="${result},$t"
+      else
+        result="$t"
+      fi
+      seen="$seen $t"
+    fi
+  done
+  echo "$result"
+}
+
+# ---------------------------------------------------------------------------
+# Role template helpers (mirrors _shared.md section 20)
+# ---------------------------------------------------------------------------
+
+# Load role templates from config.
+# Sets ROLE_TEMPLATES_JSON global.
+load_role_templates() {
+  if [[ ! -f "$ROLE_TEMPLATES" ]]; then
+    log_error "role-templates.json not found at $ROLE_TEMPLATES"
+    return 1
+  fi
+  ROLE_TEMPLATES_JSON="$(cat "$ROLE_TEMPLATES")"
+}
+
+# Get a field from a role template.
+# get_role_template_field <role-key> <field>
+# Prints the field value (string for simple fields, JSON for arrays/objects).
+get_role_template_field() {
+  local role="$1"
+  local field="$2"
+  if [[ -z "${ROLE_TEMPLATES_JSON:-}" ]]; then
+    load_role_templates
+  fi
+  if command -v jq &>/dev/null; then
+    echo "$ROLE_TEMPLATES_JSON" | jq -r ".role_templates.${role}.${field} // empty" 2>/dev/null
+  else
+    log_warn "jq not found -- cannot extract role template field"
+    echo ""
+  fi
+}
+
+# List all role template keys.
+list_role_template_keys() {
+  if [[ -z "${ROLE_TEMPLATES_JSON:-}" ]]; then
+    load_role_templates
+  fi
+  if command -v jq &>/dev/null; then
+    echo "$ROLE_TEMPLATES_JSON" | jq -r '.role_templates | keys[]' 2>/dev/null
+  else
+    grep -E '^\s+"[a-z]' "$ROLE_TEMPLATES" 2>/dev/null | sed 's/.*"\([^"]*\)".*/\1/'
+  fi
+}
+
+# ---------------------------------------------------------------------------
 # Audit log (mirrors _shared.md section 5)
 # ---------------------------------------------------------------------------
 
@@ -597,6 +760,82 @@ detect_harnesses() {
   [[ -d "$HOME/.claude" ]] && HAS_CLAUDE_CODE=1 || HAS_CLAUDE_CODE=0
   { [[ -d "$HOME/.codex" ]] || [[ -d "$HOME/.agents" ]]; } && HAS_CODEX=1 || HAS_CODEX=0
   [[ -d "$HOME/.gemini" ]] && HAS_GEMINI=1 || HAS_GEMINI=0
+}
+
+# detect_harness_cli <harness-id>
+# Returns 0 if the underlying CLI binary is on PATH, 1 otherwise.
+# Maps harness ids to executables: claude-code -> claude, codex -> codex,
+# gemini -> gemini, ollama:* -> ollama.
+detect_harness_cli() {
+  local harness="$1"
+  case "$harness" in
+    claude-code)        command -v claude  &>/dev/null ;;
+    codex)              command -v codex   &>/dev/null ;;
+    gemini)             command -v gemini  &>/dev/null ;;
+    ollama:*)           command -v ollama  &>/dev/null ;;
+    ""|null|none)       return 1 ;;
+    *)                  return 1 ;;
+  esac
+}
+
+# is_valid_harness <harness-id> [<provider>]
+# Returns 0 if the harness id is well-formed and (when provider is given) compatible.
+# Specifically rejects 'ollama:gemini' since `ollama launch` does not support gemini.
+is_valid_harness() {
+  local harness="$1"
+  local provider="${2:-}"
+
+  case "$harness" in
+    ""|null|none) return 0 ;;
+    claude-code|codex|gemini) return 0 ;;
+    ollama:gemini)
+      # Explicitly rejected: `ollama launch` integration list does not include gemini.
+      return 1
+      ;;
+    ollama:claude|ollama:claude-desktop|ollama:codex|ollama:cline|ollama:copilot|ollama:droid|ollama:hermes|ollama:kimi|ollama:opencode|ollama:openclaw|ollama:pi|ollama:pool|ollama:vscode)
+      # ollama-launch transports require provider == ollama
+      if [[ -n "$provider" && "$provider" != "ollama" ]]; then
+        return 1
+      fi
+      return 0
+      ;;
+    *) return 1 ;;
+  esac
+}
+
+# resolve_harness <agent-harness> <provider>
+# Resolution order:
+#   1. agent frontmatter `harness` (if non-null/non-empty)
+#   2. models-config.json `harness_defaults[provider]`
+#   3. null (direct provider execution)
+# Prints the resolved harness id (empty string for null).
+resolve_harness() {
+  local agent_harness="$1"
+  local provider="$2"
+
+  # Agent-level override
+  case "$agent_harness" in
+    ""|null|none) ;;
+    *) printf '%s' "$agent_harness"; return 0 ;;
+  esac
+
+  # Config default by provider
+  if [[ -z "${MODELS_JSON:-}" ]]; then
+    load_models 2>/dev/null || true
+  fi
+
+  if [[ -n "${MODELS_JSON:-}" ]] && command -v jq &>/dev/null; then
+    local cfg
+    cfg="$(echo "$MODELS_JSON" | jq -r ".harness_defaults.${provider} // \"\"" 2>/dev/null)"
+    case "$cfg" in
+      ""|null) ;;
+      *) printf '%s' "$cfg"; return 0 ;;
+    esac
+  fi
+
+  # No harness configured
+  printf ''
+  return 0
 }
 
 # ---------------------------------------------------------------------------
@@ -685,4 +924,132 @@ require_company_init() {
     return 1
   fi
   return 0
+}
+
+# ---------------------------------------------------------------------------
+# Sprint and Backlog helpers (mirrors _shared.md section 17)
+# ---------------------------------------------------------------------------
+
+# Get the next sprint ID by scanning the sprints directory.
+next_sprint_id() {
+  local max_id=0
+  if [[ -d "$TEAM_SPRINTS" ]]; then
+    for d in "$TEAM_SPRINTS"/sprint-*/; do
+      local id
+      id="$(basename "$d" | sed 's/sprint-//')"
+      id="${id%%[!0-9]*}"
+      if [[ -n "$id" ]] && (( id > max_id )); then
+        max_id=$id
+      fi
+    done
+  fi
+  printf 'sprint-%03d' $((max_id + 1))
+}
+
+# Get the next backlog item ID from the backlog frontmatter.
+next_backlog_item_id() {
+  local next_id=1
+  if [[ -f "$TEAM_BACKLOG" ]]; then
+    next_id=$(grep '^next_id:' "$TEAM_BACKLOG" 2>/dev/null | sed 's/next_id:[[:space:]]*//')
+    next_id="${next_id:-1}"
+  fi
+  printf 'item-%03d' "$next_id"
+}
+
+# Read sprint frontmatter into variables.
+# read_sprint <sprint-id>
+# Sets: SPRINT_ID, SPRINT_NAME, SPRINT_GOAL, SPRINT_START, SPRINT_END, SPRINT_STATUS, SPRINT_PLAN_ID
+read_sprint() {
+  local sprint_id="$1"
+  local sprint_file="$TEAM_SPRINTS/$sprint_id/sprint.md"
+  if [[ ! -f "$sprint_file" ]]; then
+    log_error "Sprint $sprint_id not found at $sprint_file"
+    return 1
+  fi
+  SPRINT_ID=$(grep '^id:' "$sprint_file" | sed 's/id:[[:space:]]*//')
+  SPRINT_NAME=$(grep '^name:' "$sprint_file" | sed 's/name:[[:space:]]*//')
+  SPRINT_GOAL=$(grep '^goal:' "$sprint_file" | sed 's/goal:[[:space:]]*//')
+  SPRINT_START=$(grep '^start_date:' "$sprint_file" | sed 's/start_date:[[:space:]]*//')
+  SPRINT_END=$(grep '^end_date:' "$sprint_file" | sed 's/end_date:[[:space:]]*//')
+  SPRINT_STATUS=$(grep '^status:' "$sprint_file" | sed 's/status:[[:space:]]*//')
+  SPRINT_PLAN_ID=$(grep '^plan_id:' "$sprint_file" | sed 's/plan_id:[[:space:]]*//')
+}
+
+# ---------------------------------------------------------------------------
+# Plan helpers (mirrors _shared.md section 18)
+# ---------------------------------------------------------------------------
+
+# Get the next plan ID by scanning the plans directory.
+next_plan_id() {
+  local max_id=0
+  if [[ -d "$TEAM_PLANS" ]]; then
+    for d in "$TEAM_PLANS"/plan-*/; do
+      local id
+      id="$(basename "$d" | sed 's/plan-//')"
+      id="${id%%[!0-9]*}"
+      if [[ -n "$id" ]] && (( id > max_id )); then
+        max_id=$id
+      fi
+    done
+  fi
+  printf 'plan-%03d' $((max_id + 1))
+}
+
+# Read plan frontmatter into variables.
+# read_plan <plan-id>
+# Sets: PLAN_ID, PLAN_NAME, PLAN_STATUS, PLAN_CREATED_BY, PLAN_SPRINT_ID
+read_plan() {
+  local plan_id="$1"
+  local plan_file="$TEAM_PLANS/$plan_id/plan.md"
+  if [[ ! -f "$plan_file" ]]; then
+    log_error "Plan $plan_id not found at $plan_file"
+    return 1
+  fi
+  PLAN_ID=$(grep '^id:' "$plan_file" | sed 's/id:[[:space:]]*//')
+  PLAN_NAME=$(grep '^name:' "$plan_file" | sed 's/name:[[:space:]]*//')
+  PLAN_STATUS=$(grep '^status:' "$plan_file" | head -1 | sed 's/status:[[:space:]]*//')
+  PLAN_CREATED_BY=$(grep '^created_by:' "$plan_file" | sed 's/created_by:[[:space:]]*//')
+  PLAN_SPRINT_ID=$(grep '^sprint_id:' "$plan_file" | sed 's/sprint_id:[[:space:]]*//')
+}
+
+# Topological sort of tasks by dependencies.
+# Reads plan frontmatter tasks and outputs task IDs in execution order.
+# topological_sort <plan-id>
+topological_sort() {
+  local plan_id="$1"
+  local plan_file="$TEAM_PLANS/$plan_id/plan.md"
+  if [[ ! -f "$plan_file" ]]; then
+    log_error "Plan $plan_id not found"
+    return 1
+  fi
+  # Extract task IDs and their dependencies from the plan frontmatter
+  # This is a simplified implementation for the bash scaffold
+  # Full implementation uses jq when available
+  if command -v jq &>/dev/null; then
+    local tasks_json
+    tasks_json=$(sed -n '/^---$/,/^---$/p' "$plan_file" | head -n -1 | tail -n +2 | yq -r '.tasks' 2>/dev/null || echo '[]')
+    echo "$tasks_json" | jq -r '.[].id' 2>/dev/null
+  else
+    # Fallback: grep task-IDs from the plan file
+    grep -oE 'task-[0-9]+' "$plan_file" | sort -u
+  fi
+}
+
+# Spawn a sub-agent for a plan task (Claude Code only).
+# spawn_subagent <task-id> <assignee> <role> <prompt-text> <output-path>
+# This constructs the Agent tool invocation parameters.
+spawn_subagent() {
+  local task_id="$1"
+  local assignee="$2"
+  local role="$3"
+  local prompt_text="$4"
+  local output_path="$5"
+  # Resolve tools for this agent's role
+  local tools
+  tools=$(resolve_agent_tools "$role")
+  # The actual Agent tool invocation is done by the LLM reading this output,
+  # not by bash directly (bash cannot call the Agent tool).
+  printf 'SPAWN: task=%s assignee=%s role=%s tools=[%s]\n' "$task_id" "$assignee" "$role" "$tools"
+  printf 'OUTPUT: %s\n' "$output_path"
+  printf 'PROMPT: %s\n' "$prompt_text"
 }

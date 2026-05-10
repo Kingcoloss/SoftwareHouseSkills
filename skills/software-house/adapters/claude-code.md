@@ -118,6 +118,16 @@ Read that file before responding.
 The shim is never hand-edited. The skill rewrites it whenever the canonical
 agent definition changes (e.g., after `set-model`, `promote`, `transfer`).
 
+### Tools field in agent adapters
+
+Canonical agent files include a `tools` frontmatter field listing the
+canonical tool names the agent is authorized to use (populated from
+`tools-config.json` at hire time). When writing Claude Code adapters,
+the `tools` field is not included in the adapter shim -- it lives only
+in the canonical definition. The `plan execute` operation reads the
+canonical `tools` field to determine which tools each spawned sub-agent
+may use.
+
 ### Global (freelance pool) agents
 
 Canonical: `~/.software-house/agents/<name>.md`

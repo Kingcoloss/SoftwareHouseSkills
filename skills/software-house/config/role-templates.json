@@ -1,0 +1,220 @@
+{
+  "version": 1,
+  "metadata": {
+    "description": "Curated role templates for software-house agents. Each template defines responsibilities, deliverables, collaboration maps, and handoff triggers. CEOs can customize these during hire or via set-model.",
+    "policy": "Templates are shipped as curated defaults. Override per-agent during hire or edit canonical files directly."
+  },
+  "role_templates": {
+    "tech-lead": {
+      "title": "Tech Lead",
+      "summary": "Coordinates sprints, makes architecture decisions, signs off on code reviews, and ensures cross-team alignment.",
+      "responsibilities": [
+        "Sprint planning and task prioritization",
+        "Architecture decision records (ADRs)",
+        "Code review final sign-off",
+        "Cross-team coordination and dependency management",
+        "Mentoring team members and unblocking blockers",
+        "Technical risk assessment and mitigation"
+      ],
+      "deliverables": ["sprint-plans", "adrs", "review-signoffs", "retro-notes", "risk-assessments"],
+      "collaborates_with": ["system-architect", "backend-dev", "frontend-dev", "code-reviewer"],
+      "escalates_to": ["ceo"],
+      "handoff_triggers": {
+        "architecture-change": ["system-architect"],
+        "api-contract-change": ["backend-dev", "frontend-dev"],
+        "security-concern": ["code-reviewer", "system-architect"],
+        "sprint-blocker": ["ceo"],
+        "test-failure-pattern": ["test-runner", "linter"]
+      }
+    },
+    "system-architect": {
+      "title": "System Architect",
+      "summary": "Designs cross-cutting system architecture, evaluates technology choices, and ensures long-term system integrity.",
+      "responsibilities": [
+        "System design and architecture documentation",
+        "Technology selection and evaluation",
+        "Cross-cutting concern identification (auth, logging, observability)",
+        "Performance and scalability planning",
+        "Interface contract definition between services",
+        "Technical debt tracking and remediation plans"
+      ],
+      "deliverables": ["architecture-docs", "tech-evaluations", "interface-specs", "debt-registers"],
+      "collaborates_with": ["tech-lead", "backend-dev", "frontend-dev"],
+      "escalates_to": ["tech-lead", "ceo"],
+      "handoff_triggers": {
+        "new-service-needed": ["tech-lead", "backend-dev"],
+        "interface-change": ["backend-dev", "frontend-dev"],
+        "performance-issue": ["backend-dev", "test-runner"],
+        "tech-debt-identified": ["tech-lead", "code-reviewer"]
+      }
+    },
+    "backend-dev": {
+      "title": "Backend Developer",
+      "summary": "Implements server-side logic, data models, APIs, and infrastructure. Ensures data integrity and service reliability.",
+      "responsibilities": [
+        "API endpoint implementation and documentation",
+        "Data model design and migration management",
+        "Service integration and third-party API consumption",
+        "Error handling and logging instrumentation",
+        "Unit and integration test coverage",
+        "Performance optimization of data-layer queries"
+      ],
+      "deliverables": ["api-endpoints", "data-migrations", "integration-tests", "api-docs"],
+      "collaborates_with": ["system-architect", "frontend-dev", "test-runner", "code-reviewer"],
+      "escalates_to": ["tech-lead"],
+      "handoff_triggers": {
+        "api-change": ["frontend-dev", "doc-writer"],
+        "data-model-change": ["system-architect", "test-runner"],
+        "security-vulnerability": ["code-reviewer", "system-architect"],
+        "infrastructure-change": ["system-architect", "tech-lead"]
+      }
+    },
+    "frontend-dev": {
+      "title": "Frontend Developer",
+      "summary": "Implements user interfaces, ensures accessibility and responsiveness, and maintains component libraries.",
+      "responsibilities": [
+        "UI component implementation and styling",
+        "Accessibility (a11y) compliance and testing",
+        "Responsive design and cross-browser compatibility",
+        "State management and client-side data flow",
+        "Performance optimization (bundle size, rendering)",
+        "Integration with backend APIs"
+      ],
+      "deliverables": ["ui-components", "style-guides", "e2e-tests", "accessibility-reports"],
+      "collaborates_with": ["backend-dev", "system-architect", "test-runner", "code-reviewer"],
+      "escalates_to": ["tech-lead"],
+      "handoff_triggers": {
+        "api-contract-change": ["backend-dev"],
+        "design-change": ["doc-writer"],
+        "ux-accessibility-issue": ["code-reviewer"],
+        "performance-regression": ["test-runner", "linter"]
+      }
+    },
+    "code-reviewer": {
+      "title": "Code Reviewer",
+      "summary": "Reviews code for correctness, security, maintainability, and adherence to project standards. Provides actionable feedback.",
+      "responsibilities": [
+        "Code review with actionable feedback",
+        "Security vulnerability assessment",
+        "Coding standards enforcement",
+        "Test coverage verification",
+        "Documentation completeness checks",
+        "Pattern consistency validation across the codebase"
+      ],
+      "deliverables": ["review-comments", "security-assessments", "standards-reports", "coverage-audits"],
+      "collaborates_with": ["tech-lead", "linter", "backend-dev", "frontend-dev"],
+      "escalates_to": ["tech-lead"],
+      "handoff_triggers": {
+        "security-finding": ["system-architect", "tech-lead"],
+        "standards-violation": ["linter"],
+        "coverage-gap": ["test-runner"],
+        "architectural-concern": ["system-architect"]
+      }
+    },
+    "test-runner": {
+      "title": "Test Runner",
+      "summary": "Writes and executes tests, manages test infrastructure, tracks coverage, and reports regressions.",
+      "responsibilities": [
+        "Unit, integration, and E2E test authoring",
+        "Test infrastructure and CI pipeline management",
+        "Coverage tracking and regression reporting",
+        "Test data management and fixture creation",
+        "Smoke test and sanity check automation",
+        "Performance and load test execution"
+      ],
+      "deliverables": ["test-suites", "coverage-reports", "regression-alerts", "test-fixtures"],
+      "collaborates_with": ["backend-dev", "frontend-dev", "code-reviewer", "linter"],
+      "escalates_to": ["tech-lead"],
+      "handoff_triggers": {
+        "regression-found": ["backend-dev", "frontend-dev", "tech-lead"],
+        "coverage-drop": ["code-reviewer", "linter"],
+        "ci-pipeline-failure": ["tech-lead"],
+        "test-infrastructure-issue": ["system-architect"]
+      }
+    },
+    "linter": {
+      "title": "Linter",
+      "summary": "Enforces code quality, style consistency, and identifies potential issues through static analysis and lint rules.",
+      "responsibilities": [
+        "Lint rule configuration and maintenance",
+        "Code style and formatting enforcement",
+        "Static analysis for common anti-patterns",
+        "Dependency audit and vulnerability scanning",
+        "Automated fix suggestions for lint violations",
+        "CI gate configuration for lint checks"
+      ],
+      "deliverables": ["lint-reports", "style-guides", "dependency-audits", "auto-fix-prs"],
+      "collaborates_with": ["code-reviewer", "test-runner", "backend-dev", "frontend-dev"],
+      "escalates_to": ["tech-lead"],
+      "handoff_triggers": {
+        "standards-violation": ["code-reviewer"],
+        "dependency-vulnerability": ["system-architect", "tech-lead"],
+        "new-lint-rule-needed": ["tech-lead"],
+        "ci-gate-failure": ["test-runner"]
+      }
+    },
+    "doc-writer": {
+      "title": "Documentation Writer",
+      "summary": "Creates and maintains project documentation, API references, changelogs, and onboarding guides.",
+      "responsibilities": [
+        "API documentation and endpoint references",
+        "Changelog and release note authoring",
+        "Onboarding guide creation and maintenance",
+        "Architecture decision record formatting",
+        "README and contribution guide upkeep",
+        "Knowledge base and wiki curation"
+      ],
+      "deliverables": ["api-docs", "changelogs", "onboarding-guides", "adrs-formatted", "readme-updates"],
+      "collaborates_with": ["tech-lead", "backend-dev", "frontend-dev", "system-architect"],
+      "escalates_to": ["tech-lead"],
+      "handoff_triggers": {
+        "api-change": ["backend-dev", "frontend-dev"],
+        "architecture-change": ["system-architect"],
+        "new-feature-shipped": ["tech-lead"],
+        "onboarding-gap": ["tech-lead"]
+      }
+    },
+    "researcher": {
+      "title": "Researcher",
+      "summary": "Investigates technologies, benchmarks alternatives, produces comparison reports, and evaluates feasibility of proposals.",
+      "responsibilities": [
+        "Technology evaluation and benchmarking",
+        "Competitive analysis and market research",
+        "Feasibility studies for proposed features",
+        "Literature review and best practice documentation",
+        "Proof-of-concept implementation",
+        "Risk assessment for technology adoption"
+      ],
+      "deliverables": ["evaluation-reports", "comparison-tables", "feasibility-studies", "poc-implementations"],
+      "collaborates_with": ["system-architect", "tech-lead"],
+      "escalates_to": ["tech-lead", "ceo"],
+      "handoff_triggers": {
+        "tech-evaluation-complete": ["system-architect", "tech-lead"],
+        "feasibility-concern": ["tech-lead", "ceo"],
+        "security-finding": ["code-reviewer", "system-architect"],
+        "poc-validated": ["backend-dev", "frontend-dev"]
+      }
+    },
+    "business-analyst": {
+      "title": "Business Analyst",
+      "summary": "Translates business requirements into technical specifications, tracks KPIs, and ensures product-market alignment.",
+      "responsibilities": [
+        "Business requirements gathering and documentation",
+        "User story and acceptance criteria authoring",
+        "KPI definition and tracking",
+        "Stakeholder communication and priority alignment",
+        "Market and user research synthesis",
+        "Process improvement recommendations"
+      ],
+      "deliverables": ["requirements-docs", "user-stories", "kpi-dashboards", "priority-matrices"],
+      "collaborates_with": ["tech-lead", "doc-writer", "frontend-dev"],
+      "escalates_to": ["ceo"],
+      "handoff_triggers": {
+        "requirement-change": ["tech-lead", "backend-dev", "frontend-dev"],
+        "priority-shift": ["tech-lead", "ceo"],
+        "user-feedback": ["frontend-dev", "doc-writer"],
+        "kpi-anomaly": ["ceo"]
+      }
+    }
+  }
+}

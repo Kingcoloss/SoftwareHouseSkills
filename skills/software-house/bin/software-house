@@ -69,6 +69,29 @@ Commands:
   award-xp          Grant XP and trigger level/achievement checks
   dashboard         Show gamification stats and skill-tree state
 
+  backlog add       Add an item to the product backlog
+  backlog list      View backlog items with optional filters
+  backlog prioritize Reorder backlog item priorities
+
+  sprint create     Start a new sprint
+  sprint plan       Add/remove backlog items to/from a sprint
+  sprint board      View or move items on the sprint board
+  sprint standup    Record daily standup notes
+  sprint review     Write sprint review notes
+  sprint retro      Write sprint retrospective
+
+  plan create       Create a plan with tasks and dependencies
+  plan confirm      CEO confirms a draft plan
+  plan execute      Spawn parallel sub-agents to execute a plan
+  plan status       Show current execution status of a plan
+  plan synthesize   Tech-lead synthesizes completed task results
+
+  delegate          Delegate a task to an agent (with provider fallback)
+  handoff           Manage inter-agent handoff briefs (list/show/complete/generate)
+
+  wiki-ingest       Ingest a source document into the wiki (archive + compile)
+  wiki-lint         Run wiki-specific health checks (confidence, wikilinks, stale pages)
+
 Options:
   --help            Show this help message
   --version         Show version
@@ -121,6 +144,28 @@ resolve_command() {
     okr-review)     echo "okr-review" ;;
     award-xp)       echo "award-xp" ;;
     dashboard)      echo "dashboard" ;;
+    backlog-add)    echo "backlog-add" ;;
+    backlog-list)   echo "backlog-list" ;;
+    backlog-prioritize) echo "backlog-prioritize" ;;
+    sprint-create)  echo "sprint-create" ;;
+    sprint-plan)    echo "sprint-plan" ;;
+    sprint-board)   echo "sprint-board" ;;
+    sprint-standup) echo "sprint-standup" ;;
+    sprint-review)  echo "sprint-review" ;;
+    sprint-retro)    echo "sprint-retro" ;;
+    plan-create)    echo "plan-create" ;;
+    plan-confirm)   echo "plan-confirm" ;;
+    plan-execute)   echo "plan-execute" ;;
+    plan-status)    echo "plan-status" ;;
+    plan-synthesize) echo "plan-synthesize" ;;
+    handoff-list)     echo "handoff-list" ;;
+    handoff-show)     echo "handoff-show" ;;
+    handoff-complete) echo "handoff-complete" ;;
+    handoff-generate) echo "handoff-generate" ;;
+    delegate)       echo "delegate" ;;
+    handoff)        echo "handoff" ;;
+    wiki-ingest)    echo "wiki-ingest" ;;
+    wiki-lint)      echo "wiki-lint" ;;
     *)              echo "" ;;
   esac
 }
@@ -183,7 +228,7 @@ main() {
   local cmd="$1"
   shift
 
-  # Handle compound commands (dept create, dept assign, okr set, okr review, outsource hire)
+  # Handle compound commands (dept create, dept assign, okr set, okr review, outsource hire, backlog, sprint, plan)
   case "$cmd" in
     dept)
       if (( $# > 0 )) && [[ "$1" != --* ]]; then
@@ -201,6 +246,30 @@ main() {
       if (( $# > 0 )) && [[ "$1" != --* ]]; then
         local sub="$1"; shift
         cmd="outsource-${sub}"
+      fi
+      ;;
+    backlog)
+      if (( $# > 0 )) && [[ "$1" != --* ]]; then
+        local sub="$1"; shift
+        cmd="backlog-${sub}"
+      fi
+      ;;
+    sprint)
+      if (( $# > 0 )) && [[ "$1" != --* ]]; then
+        local sub="$1"; shift
+        cmd="sprint-${sub}"
+      fi
+      ;;
+    plan)
+      if (( $# > 0 )) && [[ "$1" != --* ]]; then
+        local sub="$1"; shift
+        cmd="plan-${sub}"
+      fi
+      ;;
+    handoff)
+      if (( $# > 0 )) && [[ "$1" != --* ]]; then
+        local sub="$1"; shift
+        cmd="handoff-${sub}"
       fi
       ;;
   esac

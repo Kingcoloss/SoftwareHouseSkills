@@ -69,25 +69,27 @@ harnesses. The canonical policies remain `policies/privacy.md` and
 
 ## Custom commands -- commands/*.toml
 
-Gemini CLI extensions may define custom slash commands via TOML files under
-the `commands/` directory. Each TOML file defines one command or command group.
-Nested directories form command groups.
+Gemini CLI extensions define custom slash commands via simple TOML files under
+the `commands/` directory. The TOML format supports only two fields:
 
-For this skill, `commands/software-house.toml` (and optional per-operation
-files such as `commands/software-house/init.toml`, `commands/software-house/list.toml`,
-etc.) define the `/software-house` command and its subcommands:
+- `description` (optional): one-line description shown in `/help`
+- `prompt` (required): the prompt sent to the model; `{{args}}` is replaced
+  with whatever the user types after the command name
+
+The filename determines the command name. Subdirectories create namespaced
+commands (e.g., `commands/software-house/init.toml` becomes `/software-house:init`).
+
+For this skill, a single entry-point command is used:
 
 ```
-/software-house init
-/software-house list [team]
-/software-house show <name>
-/software-house org-chart [team]
-/software-house lint
+commands/software-house.toml   ->   /software-house
 ```
 
-The actual TOML command files are created by a separate task. This adapter
-documents their location so the install path is consistent. The `commands/`
-directory is at:
+The TOML file passes `{{args}}` through to the skill. GEMINI.md (loaded via
+contextFileName) contains the full routing table and handles subcommand
+dispatch internally. This avoids duplicating the routing logic in TOML.
+
+The `commands/` directory is at:
 
 ```
 ~/.gemini/extensions/software-house/commands/

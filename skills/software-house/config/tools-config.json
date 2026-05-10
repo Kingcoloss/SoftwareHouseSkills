@@ -1,0 +1,32 @@
+{
+  "version": 1,
+  "canonical_tools": {
+    "read":       { "claude-code": "Read",       "codex": "read",       "gemini": "read_file" },
+    "write":      { "claude-code": "Write",      "codex": "write",      "gemini": "write_file" },
+    "edit":       { "claude-code": "Edit",       "codex": "edit",       "gemini": "edit_file" },
+    "bash":       { "claude-code": "Bash",       "codex": "shell",      "gemini": "shell" },
+    "glob":       { "claude-code": "Glob",       "codex": "glob",       "gemini": "glob" },
+    "grep":       { "claude-code": "Grep",       "codex": "grep",       "gemini": "grep" },
+    "agent":      { "claude-code": "Agent",      "codex": null,         "gemini": null },
+    "web-search": { "claude-code": "WebSearch",  "codex": null,         "gemini": null },
+    "web-fetch":  { "claude-code": "WebFetch",   "codex": null,         "gemini": null }
+  },
+  "shared_tools": ["read", "write", "edit", "bash", "glob", "grep"],
+  "role_tools": {
+    "default":          [],
+    "tech-lead":        ["agent"],
+    "system-architect":  ["agent"],
+    "code-reviewer":     [],
+    "backend-dev":       [],
+    "frontend-dev":      [],
+    "doc-writer":        [],
+    "linter":            [],
+    "test-runner":       [],
+    "researcher":        ["web-search", "web-fetch"],
+    "business-analyst":  ["web-search", "web-fetch"]
+  },
+  "metadata": {
+    "schema_version": 1,
+    "policy": "shared_tools are mandatory for all agents. role_tools lists additional canonical tools per role. Harness adapters translate canonical names to harness-specific names at write time."
+  }
+}

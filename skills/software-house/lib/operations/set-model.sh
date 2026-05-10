@@ -7,14 +7,18 @@ op_set_model() {
   local provider=""
   local model=""
   local effort=""
+  local harness=""
+  local harness_changed=0
 
   while (( $# > 0 )); do
     case "$1" in
-      --provider)  provider="$2"; shift 2 ;;
-      --model)     model="$2"; shift 2 ;;
-      --effort)    effort="$2"; shift 2 ;;
+      --provider)      provider="$2"; shift 2 ;;
+      --model)         model="$2"; shift 2 ;;
+      --effort)        effort="$2"; shift 2 ;;
+      --harness)       harness="$2"; harness_changed=1; shift 2 ;;
+      --clear-harness) harness="null"; harness_changed=1; shift ;;
       --help|-h)
-        printf 'Usage: set-model <name> [--provider <p>] [--model <m>] [--effort <e>]\n'
+        printf 'Usage: set-model <name> [--provider <p>] [--model <m>] [--effort <e>] [--harness <value>] [--clear-harness]\n'
         return 0
         ;;
       *)
@@ -44,6 +48,20 @@ op_set_model() {
   local new_effort="${effort:-$AGENT_EFFORT_PRESET}"
   [[ "$new_effort" == "med" ]] && new_effort="medium"
 
+  local new_harness="${AGENT_HARNESS:-null}"
+  if (( harness_changed )); then
+    new_harness="$harness"
+  fi
+  if [[ "$new_harness" != "null" && -n "$new_harness" ]]; then
+    if ! is_valid_harness "$new_harness" "$new_provider"; then
+      printf 'Error: invalid harness %s for provider %s.\n' "$new_harness" "$new_provider" >&2
+      printf 'Valid: claude-code | codex | gemini | ollama:<integration>\n' >&2
+      printf 'Note: ollama:gemini is NOT supported (gemini is not an ollama launch integration).\n' >&2
+      printf 'Note: ollama:<integration> requires provider=ollama.\n' >&2
+      return 1
+    fi
+  fi
+
   # Egress consent gate if switching to external provider
   local provider_class
   provider_class="$(get_provider_class "$new_provider")"
@@ -64,6 +82,9 @@ op_set_model() {
   printf '  Provider: %s -> %s\n' "$AGENT_PROVIDER" "$new_provider"
   printf '  Model:    %s -> %s\n' "$AGENT_MODEL" "$new_model"
   printf '  Effort:   %s -> %s\n' "$AGENT_EFFORT_PRESET" "$new_effort"
+  if (( harness_changed )); then
+    printf '  Harness:  %s -> %s\n' "${AGENT_HARNESS:-null}" "$new_harness"
+  fi
 
   if ! confirm 3; then return 1; fi
 
@@ -85,6 +106,13 @@ op_set_model() {
     write_agent_field "$canonical_file" "egress_consent" "external:$utc_d"
   fi
 
+  if (( harness_changed )); then
+    write_agent_field "$canonical_file" "harness" "$new_harness"
+    if [[ -f "$WIKI_PEOPLE/${name}.md" ]]; then
+      write_agent_field "$WIKI_PEOPLE/${name}.md" "harness" "$new_harness"
+    fi
+  fi
+
   # Update wiki people page
   if [[ -f "$WIKI_PEOPLE/${name}.md" ]]; then
     write_agent_field "$WIKI_PEOPLE/${name}.md" "provider" "$new_provider"
@@ -95,11 +123,12 @@ op_set_model() {
   # TODO: Rewrite harness adapters with new model
 
   local audit_entry
-  audit_entry="{\"ts\":\"$utc_ts\",\"actor\":\"user\",\"op\":\"set-model\",\"scope\":\"agent:$name\",\"args\":{\"name\":\"$name\",\"provider\":\"$new_provider\",\"model\":\"$new_model\",\"effort\":\"$new_effort\"},\"diff\":{\"updated\":[\"$canonical_file\"]},\"confirmation\":{\"tier\":3},\"egress_consent\":{\"required\":$egress_required},\"result\":\"ok\"}"
+  audit_entry="{\"ts\":\"$utc_ts\",\"actor\":\"user\",\"op\":\"set-model\",\"scope\":\"agent:$name\",\"args\":{\"name\":\"$name\",\"provider\":\"$new_provider\",\"model\":\"$new_model\",\"effort\":\"$new_effort\",\"harness\":\"$new_harness\"},\"diff\":{\"updated\":[\"$canonical_file\"]},\"confirmation\":{\"tier\":3},\"egress_consent\":{\"required\":$egress_required},\"result\":\"ok\"}"
   audit_log "$audit_entry"
 
   printf '\nUpdated model for %s\n' "$name"
   printf '  Provider: %s [%s]\n' "$new_provider" "$provider_class"
   printf '  Model:    %s\n' "$new_model"
   printf '  Effort:   %s\n' "$new_effort"
+  printf '  Harness:  %s\n' "${new_harness:-null}"
 }

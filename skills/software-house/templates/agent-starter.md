@@ -25,6 +25,14 @@ contract_start: null
 contract_end: null
 rate: null
 achievements: []
+responsibilities: []
+deliverables: []
+collaborates_with: []
+handoff_triggers: {}
+confidence: 1.0
+lifecycle: draft
+last_compiled: null
+source_refs: []
 onboard_at: null
 onboard_status: null
 offboard_at: null
@@ -35,23 +43,39 @@ demotion_at: null
 demotion_from_level: null
 fired_at: null
 updated_at: null
+tools: []
+harness: null
 ---
 
 # <name>
 
-Agent provisioned by software-house skill.
-
-Role: <role-key>
-Provider: <provider> [<local|external>]
-
 ## Responsibilities
 
-(Describe the agent's primary duties here.)
+(Populated from role-templates.json at hire time.)
 
-## Constraints
+## Deliverables
 
-(Describe what the agent must not do here.)
+(Populated from role-templates.json at hire time.)
 
-## Working Notes
+## Collaboration Map
+
+- Works with: (populated from role-templates.json at hire time)
+- Escalates to: (populated from role-templates.json at hire time)
+
+## Handoff Protocol
+
+(Populated from role-templates.json handoff_triggers at hire time.)
+
+When receiving a task:
+1. Analyze which roles need to be involved
+2. Generate a handoff brief for each role
+3. Write briefs to wiki/handoffs/briefs/<from>-<to>-<timestamp>.md
+4. CEO or orchestrator routes briefs to target agents
+
+## Onboarding
+
+Briefing not yet written. Run `/software-house onboard <name>` to generate.
+
+## Notes
 
 (empty)

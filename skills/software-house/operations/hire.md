@@ -57,6 +57,11 @@ Resolve effort:
 - `med` -> `medium` internally.
 - If `--effort` is not given, use `defaults_by_role[role].effort`.
 
+Resolve tools:
+- Read `$TOOLS_CONFIG`. Compute the agent's tool list as `shared_tools + role_tools[role]` (deduplicated, preserving order).
+- If the role is not found in `role_tools`, use `shared_tools + role_tools["default"]` (which adds nothing beyond shared_tools for the default role).
+- The resolved tool list will be written to the `tools` frontmatter field.
+
 If `--dept` is given, check that `$DEPARTMENTS_HOME/<dept>/` exists. Abort if not: `Error: department <dept> not found. Run /software-house dept-create <dept> first.`
 
 ### 2. Determine scope and target paths
@@ -191,6 +196,7 @@ buddy: null
 employment: <permanent | freelance>
 hired_by_teams: []
 achievements: []
+tools: [read, write, edit, bash, glob, grep, ...role-specific]
 ---
 
 # <name>
@@ -207,6 +213,8 @@ For the `employee_id`: glob `$WIKI_PEOPLE/` and `$TEAM_AGENTS/` for existing `.m
 `egress_consent` is:
 - `none` if provider is local
 - `external:<utc-date-of-consent>` if provider is external (date is the timestamp from Step 4)
+
+`tools` is the resolved list from Step 1 (shared_tools + role_tools[role]).
 
 ### 7. Write wiki people page
 

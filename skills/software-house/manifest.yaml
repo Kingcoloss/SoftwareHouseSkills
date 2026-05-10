@@ -1,6 +1,6 @@
 schema_version: 1
 name: software-house
-version: 0.1.0
+version: 0.9.0
 description: >
   Turn the user's computer into a managed software house: projects with
   CLAUDE.md (or AGENTS.md, GEMINI.md) are teams, subagents are employees,
@@ -72,17 +72,63 @@ optional_tools:
   - AskUserQuestion  # Claude Code; falls back to text-prompt protocol per safety.md
   - confirm          # Codex equivalent; same fallback
 
-# Operations declared by this skill (Phase 1 only; later phases extend this list)
+# Operations declared by this skill (all phases)
 operations:
+  # Phase 1 -- Foundation
   - {name: init,      file: operations/init.md,      tier: 2}
   - {name: list,      file: operations/list.md,      tier: 1}
   - {name: show,      file: operations/show.md,      tier: 1}
   - {name: org-chart, file: operations/org-chart.md, tier: 1}
   - {name: lint,      file: operations/lint.md,      tier: 1}
+  # Phase 2 -- Recruitment
+  - {name: hire,          file: operations/hire.md,          tier: 2}
+  - {name: onboard,      file: operations/onboard.md,      tier: 2}
+  - {name: fire,          file: operations/fire.md,          tier: 4}
+  - {name: dept-create,   file: operations/dept-create.md,   tier: 2}
+  - {name: dept-assign,   file: operations/dept-assign.md,   tier: 3}
+  # Phase 3 -- Mobility & Outsource
+  - {name: transfer,       file: operations/transfer.md,       tier: 3}
+  - {name: second,         file: operations/second.md,         tier: 3}
+  - {name: promote,        file: operations/promote.md,        tier: 3}
+  - {name: demote,         file: operations/demote.md,         tier: 3}
+  - {name: set-model,     file: operations/set-model.md,     tier: 3}
+  - {name: outsource-hire, file: operations/outsource-hire.md, tier: 2}
+  - {name: contract,       file: operations/contract.md,       tier: 3}
+  - {name: off-board,      file: operations/off-board.md,      tier: 3}
+  - {name: disband,        file: operations/disband.md,        tier: 4}
+  # Phase 4 -- OKR & Gamification
+  - {name: okr-set,    file: operations/okr-set.md,    tier: 2}
+  - {name: okr-review, file: operations/okr-review.md, tier: 1}
+  - {name: award-xp,   file: operations/award-xp.md,   tier: 2}
+  - {name: dashboard,  file: operations/dashboard.md,  tier: 1}
+  # Phase 5 -- Agile Scrum
+  - {name: backlog-add,        file: operations/backlog-add.md,        tier: 2}
+  - {name: backlog-list,       file: operations/backlog-list.md,       tier: 1}
+  - {name: backlog-prioritize, file: operations/backlog-prioritize.md, tier: 3}
+  - {name: sprint-create,  file: operations/sprint-create.md,  tier: 2}
+  - {name: sprint-plan,    file: operations/sprint-plan.md,    tier: 3}
+  - {name: sprint-board,   file: operations/sprint-board.md,   tier: 1}
+  - {name: sprint-standup, file: operations/sprint-standup.md, tier: 2}
+  - {name: sprint-review,  file: operations/sprint-review.md,  tier: 2}
+  - {name: sprint-retro,   file: operations/sprint-retro.md,   tier: 2}
+  # Phase 6 -- Plan Execution (Auto-spawn)
+  - {name: plan-create,     file: operations/plan-create.md,     tier: 2}
+  - {name: plan-confirm,    file: operations/plan-confirm.md,    tier: 3}
+  - {name: plan-execute,    file: operations/plan-execute.md,    tier: 3}
+  - {name: plan-status,     file: operations/plan-status.md,     tier: 1}
+  - {name: plan-synthesize, file: operations/plan-synthesize.md, tier: 2}
+  # Phase 7 -- Sub-Agent Delegation
+  - {name: delegate,     file: operations/delegate.md,     tier: 2}
+  # Phase 8 -- Inter-Agent Handoff
+  - {name: handoff,      file: operations/handoff.md,      tier: 2}
+  # Phase 9 -- Wiki-LLM Enhancement
+  - {name: wiki-ingest,  file: operations/wiki-ingest.md,  tier: 2}
+  - {name: wiki-lint,   file: operations/wiki-lint.md,     tier: 1}
 
 # Provider awareness -- pointer to the catalog the skill loads
 providers_catalog: config/providers.json
 models_config: config/models-config.json
+tools_config: config/tools-config.json
 
 # Reading order for the assistant on first invocation per session
 required_reading_order:
