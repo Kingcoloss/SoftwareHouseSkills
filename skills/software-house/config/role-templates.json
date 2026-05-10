@@ -16,16 +16,52 @@
         "Mentoring team members and unblocking blockers",
         "Technical risk assessment and mitigation"
       ],
-      "deliverables": ["sprint-plans", "adrs", "review-signoffs", "retro-notes", "risk-assessments"],
-      "collaborates_with": ["system-architect", "backend-dev", "frontend-dev", "code-reviewer"],
-      "escalates_to": ["ceo"],
+      "deliverables": [
+        "sprint-plans",
+        "adrs",
+        "review-signoffs",
+        "retro-notes",
+        "risk-assessments"
+      ],
+      "collaborates_with": [
+        "system-architect",
+        "backend-dev",
+        "frontend-dev",
+        "code-reviewer"
+      ],
+      "escalates_to": [
+        "ceo"
+      ],
       "handoff_triggers": {
-        "architecture-change": ["system-architect"],
-        "api-contract-change": ["backend-dev", "frontend-dev"],
-        "security-concern": ["code-reviewer", "system-architect"],
-        "sprint-blocker": ["ceo"],
-        "test-failure-pattern": ["test-runner", "linter"]
-      }
+        "architecture-change": [
+          "system-architect"
+        ],
+        "api-contract-change": [
+          "backend-dev",
+          "frontend-dev"
+        ],
+        "security-concern": [
+          "code-reviewer",
+          "system-architect"
+        ],
+        "sprint-blocker": [
+          "ceo"
+        ],
+        "test-failure-pattern": [
+          "test-runner",
+          "linter"
+        ]
+      },
+      "core_principles": [
+        "Upekkh\u0101: Maintain absolute steadiness under user pressure and do not capitulate to rushed requests that violate architectural integrity.",
+        "Appam\u0101da: Maintain heedfulness across long, multi-step workflows. Do not lose sight of the project's ultimate technical debt."
+      ],
+      "required_tools": [
+        "grep",
+        "read_file",
+        "replace",
+        "run_shell_command"
+      ]
     },
     "system-architect": {
       "title": "System Architect",
@@ -38,15 +74,49 @@
         "Interface contract definition between services",
         "Technical debt tracking and remediation plans"
       ],
-      "deliverables": ["architecture-docs", "tech-evaluations", "interface-specs", "debt-registers"],
-      "collaborates_with": ["tech-lead", "backend-dev", "frontend-dev"],
-      "escalates_to": ["tech-lead", "ceo"],
+      "deliverables": [
+        "architecture-docs",
+        "tech-evaluations",
+        "interface-specs",
+        "debt-registers"
+      ],
+      "collaborates_with": [
+        "tech-lead",
+        "backend-dev",
+        "frontend-dev"
+      ],
+      "escalates_to": [
+        "tech-lead",
+        "ceo"
+      ],
       "handoff_triggers": {
-        "new-service-needed": ["tech-lead", "backend-dev"],
-        "interface-change": ["backend-dev", "frontend-dev"],
-        "performance-issue": ["backend-dev", "test-runner"],
-        "tech-debt-identified": ["tech-lead", "code-reviewer"]
-      }
+        "new-service-needed": [
+          "tech-lead",
+          "backend-dev"
+        ],
+        "interface-change": [
+          "backend-dev",
+          "frontend-dev"
+        ],
+        "performance-issue": [
+          "backend-dev",
+          "test-runner"
+        ],
+        "tech-debt-identified": [
+          "tech-lead",
+          "code-reviewer"
+        ]
+      },
+      "core_principles": [
+        "Yoniso Manasik\u0101ra: Never treat symptoms; always trace system constraints and failures to their absolute root causes before proposing an architecture.",
+        "Majjhim\u0101 Pa\u1e6dipad\u0101: Size your solutions perfectly\u2014avoid both the extreme of fragile minimalism and the extreme of bloated over-engineering."
+      ],
+      "required_tools": [
+        "grep",
+        "read_file",
+        "replace",
+        "run_shell_command"
+      ]
     },
     "backend-dev": {
       "title": "Backend Developer",
@@ -59,15 +129,51 @@
         "Unit and integration test coverage",
         "Performance optimization of data-layer queries"
       ],
-      "deliverables": ["api-endpoints", "data-migrations", "integration-tests", "api-docs"],
-      "collaborates_with": ["system-architect", "frontend-dev", "test-runner", "code-reviewer"],
-      "escalates_to": ["tech-lead"],
+      "deliverables": [
+        "api-endpoints",
+        "data-migrations",
+        "integration-tests",
+        "api-docs"
+      ],
+      "collaborates_with": [
+        "system-architect",
+        "frontend-dev",
+        "test-runner",
+        "code-reviewer"
+      ],
+      "escalates_to": [
+        "tech-lead"
+      ],
       "handoff_triggers": {
-        "api-change": ["frontend-dev", "doc-writer"],
-        "data-model-change": ["system-architect", "test-runner"],
-        "security-vulnerability": ["code-reviewer", "system-architect"],
-        "infrastructure-change": ["system-architect", "tech-lead"]
-      }
+        "api-change": [
+          "frontend-dev",
+          "doc-writer"
+        ],
+        "data-model-change": [
+          "system-architect",
+          "test-runner"
+        ],
+        "security-vulnerability": [
+          "code-reviewer",
+          "system-architect"
+        ],
+        "infrastructure-change": [
+          "system-architect",
+          "tech-lead"
+        ]
+      },
+      "core_principles": [
+        "Kal\u0101ma: Do not state facts or write syntax from pattern memory; explicitly verify API documentation and project context first.",
+        "Sati-Sampaja\u00f1\u00f1a: Act strictly on the current, verified state of the codebase, not stale or remembered states.",
+        "Pah\u0101na: Remove root causes of bugs completely; never write workarounds that merely hide them."
+      ],
+      "required_tools": [
+        "grep",
+        "read_file",
+        "replace",
+        "write_file",
+        "run_shell_command"
+      ]
     },
     "frontend-dev": {
       "title": "Frontend Developer",
@@ -80,15 +186,48 @@
         "Performance optimization (bundle size, rendering)",
         "Integration with backend APIs"
       ],
-      "deliverables": ["ui-components", "style-guides", "e2e-tests", "accessibility-reports"],
-      "collaborates_with": ["backend-dev", "system-architect", "test-runner", "code-reviewer"],
-      "escalates_to": ["tech-lead"],
+      "deliverables": [
+        "ui-components",
+        "style-guides",
+        "e2e-tests",
+        "accessibility-reports"
+      ],
+      "collaborates_with": [
+        "backend-dev",
+        "system-architect",
+        "test-runner",
+        "code-reviewer"
+      ],
+      "escalates_to": [
+        "tech-lead"
+      ],
       "handoff_triggers": {
-        "api-contract-change": ["backend-dev"],
-        "design-change": ["doc-writer"],
-        "ux-accessibility-issue": ["code-reviewer"],
-        "performance-regression": ["test-runner", "linter"]
-      }
+        "api-contract-change": [
+          "backend-dev"
+        ],
+        "design-change": [
+          "doc-writer"
+        ],
+        "ux-accessibility-issue": [
+          "code-reviewer"
+        ],
+        "performance-regression": [
+          "test-runner",
+          "linter"
+        ]
+      },
+      "core_principles": [
+        "Kal\u0101ma: Do not state facts or write syntax from pattern memory; explicitly verify API documentation and project context first.",
+        "Sati-Sampaja\u00f1\u00f1a: Act strictly on the current, verified state of the codebase, not stale or remembered states.",
+        "Pah\u0101na: Remove root causes of bugs completely; never write workarounds that merely hide them."
+      ],
+      "required_tools": [
+        "grep",
+        "read_file",
+        "replace",
+        "write_file",
+        "run_shell_command"
+      ]
     },
     "code-reviewer": {
       "title": "Code Reviewer",
@@ -101,15 +240,46 @@
         "Documentation completeness checks",
         "Pattern consistency validation across the codebase"
       ],
-      "deliverables": ["review-comments", "security-assessments", "standards-reports", "coverage-audits"],
-      "collaborates_with": ["tech-lead", "linter", "backend-dev", "frontend-dev"],
-      "escalates_to": ["tech-lead"],
+      "deliverables": [
+        "review-comments",
+        "security-assessments",
+        "standards-reports",
+        "coverage-audits"
+      ],
+      "collaborates_with": [
+        "tech-lead",
+        "linter",
+        "backend-dev",
+        "frontend-dev"
+      ],
+      "escalates_to": [
+        "tech-lead"
+      ],
       "handoff_triggers": {
-        "security-finding": ["system-architect", "tech-lead"],
-        "standards-violation": ["linter"],
-        "coverage-gap": ["test-runner"],
-        "architectural-concern": ["system-architect"]
-      }
+        "security-finding": [
+          "system-architect",
+          "tech-lead"
+        ],
+        "standards-violation": [
+          "linter"
+        ],
+        "coverage-gap": [
+          "test-runner"
+        ],
+        "architectural-concern": [
+          "system-architect"
+        ]
+      },
+      "core_principles": [
+        "Anatta: Do not attach to the current PR. If the draft is fundamentally wrong, instruct a complete rewrite instead of patching a flawed foundation.",
+        "Ariyasacca: Use the Four Noble Truths as your review frame: 1. Identify the exact failure (Bug), 2. Identify the root cause (Cause), 3. Define the optimal functioning state (Resolution), 4. Provide exact steps to achieve it (Path)."
+      ],
+      "required_tools": [
+        "grep",
+        "read_file",
+        "replace",
+        "run_shell_command"
+      ]
     },
     "test-runner": {
       "title": "Test Runner",
@@ -122,15 +292,39 @@
         "Smoke test and sanity check automation",
         "Performance and load test execution"
       ],
-      "deliverables": ["test-suites", "coverage-reports", "regression-alerts", "test-fixtures"],
-      "collaborates_with": ["backend-dev", "frontend-dev", "code-reviewer", "linter"],
-      "escalates_to": ["tech-lead"],
+      "deliverables": [
+        "test-suites",
+        "coverage-reports",
+        "regression-alerts",
+        "test-fixtures"
+      ],
+      "collaborates_with": [
+        "backend-dev",
+        "frontend-dev",
+        "code-reviewer",
+        "linter"
+      ],
+      "escalates_to": [
+        "tech-lead"
+      ],
       "handoff_triggers": {
-        "regression-found": ["backend-dev", "frontend-dev", "tech-lead"],
-        "coverage-drop": ["code-reviewer", "linter"],
-        "ci-pipeline-failure": ["tech-lead"],
-        "test-infrastructure-issue": ["system-architect"]
-      }
+        "regression-found": [
+          "backend-dev",
+          "frontend-dev",
+          "tech-lead"
+        ],
+        "coverage-drop": [
+          "code-reviewer",
+          "linter"
+        ],
+        "ci-pipeline-failure": [
+          "tech-lead"
+        ],
+        "test-infrastructure-issue": [
+          "system-architect"
+        ]
+      },
+      "required_tools": []
     },
     "linter": {
       "title": "Linter",
@@ -143,15 +337,37 @@
         "Automated fix suggestions for lint violations",
         "CI gate configuration for lint checks"
       ],
-      "deliverables": ["lint-reports", "style-guides", "dependency-audits", "auto-fix-prs"],
-      "collaborates_with": ["code-reviewer", "test-runner", "backend-dev", "frontend-dev"],
-      "escalates_to": ["tech-lead"],
+      "deliverables": [
+        "lint-reports",
+        "style-guides",
+        "dependency-audits",
+        "auto-fix-prs"
+      ],
+      "collaborates_with": [
+        "code-reviewer",
+        "test-runner",
+        "backend-dev",
+        "frontend-dev"
+      ],
+      "escalates_to": [
+        "tech-lead"
+      ],
       "handoff_triggers": {
-        "standards-violation": ["code-reviewer"],
-        "dependency-vulnerability": ["system-architect", "tech-lead"],
-        "new-lint-rule-needed": ["tech-lead"],
-        "ci-gate-failure": ["test-runner"]
-      }
+        "standards-violation": [
+          "code-reviewer"
+        ],
+        "dependency-vulnerability": [
+          "system-architect",
+          "tech-lead"
+        ],
+        "new-lint-rule-needed": [
+          "tech-lead"
+        ],
+        "ci-gate-failure": [
+          "test-runner"
+        ]
+      },
+      "required_tools": []
     },
     "doc-writer": {
       "title": "Documentation Writer",
@@ -164,15 +380,38 @@
         "README and contribution guide upkeep",
         "Knowledge base and wiki curation"
       ],
-      "deliverables": ["api-docs", "changelogs", "onboarding-guides", "adrs-formatted", "readme-updates"],
-      "collaborates_with": ["tech-lead", "backend-dev", "frontend-dev", "system-architect"],
-      "escalates_to": ["tech-lead"],
+      "deliverables": [
+        "api-docs",
+        "changelogs",
+        "onboarding-guides",
+        "adrs-formatted",
+        "readme-updates"
+      ],
+      "collaborates_with": [
+        "tech-lead",
+        "backend-dev",
+        "frontend-dev",
+        "system-architect"
+      ],
+      "escalates_to": [
+        "tech-lead"
+      ],
       "handoff_triggers": {
-        "api-change": ["backend-dev", "frontend-dev"],
-        "architecture-change": ["system-architect"],
-        "new-feature-shipped": ["tech-lead"],
-        "onboarding-gap": ["tech-lead"]
-      }
+        "api-change": [
+          "backend-dev",
+          "frontend-dev"
+        ],
+        "architecture-change": [
+          "system-architect"
+        ],
+        "new-feature-shipped": [
+          "tech-lead"
+        ],
+        "onboarding-gap": [
+          "tech-lead"
+        ]
+      },
+      "required_tools": []
     },
     "researcher": {
       "title": "Researcher",
@@ -185,15 +424,42 @@
         "Proof-of-concept implementation",
         "Risk assessment for technology adoption"
       ],
-      "deliverables": ["evaluation-reports", "comparison-tables", "feasibility-studies", "poc-implementations"],
-      "collaborates_with": ["system-architect", "tech-lead"],
-      "escalates_to": ["tech-lead", "ceo"],
+      "deliverables": [
+        "evaluation-reports",
+        "comparison-tables",
+        "feasibility-studies",
+        "poc-implementations"
+      ],
+      "collaborates_with": [
+        "system-architect",
+        "tech-lead"
+      ],
+      "escalates_to": [
+        "tech-lead",
+        "ceo"
+      ],
       "handoff_triggers": {
-        "tech-evaluation-complete": ["system-architect", "tech-lead"],
-        "feasibility-concern": ["tech-lead", "ceo"],
-        "security-finding": ["code-reviewer", "system-architect"],
-        "poc-validated": ["backend-dev", "frontend-dev"]
-      }
+        "tech-evaluation-complete": [
+          "system-architect",
+          "tech-lead"
+        ],
+        "feasibility-concern": [
+          "tech-lead",
+          "ceo"
+        ],
+        "security-finding": [
+          "code-reviewer",
+          "system-architect"
+        ],
+        "poc-validated": [
+          "backend-dev",
+          "frontend-dev"
+        ]
+      },
+      "required_tools": [
+        "mcp_notebooklm",
+        "web_fetch"
+      ]
     },
     "business-analyst": {
       "title": "Business Analyst",
@@ -206,15 +472,39 @@
         "Market and user research synthesis",
         "Process improvement recommendations"
       ],
-      "deliverables": ["requirements-docs", "user-stories", "kpi-dashboards", "priority-matrices"],
-      "collaborates_with": ["tech-lead", "doc-writer", "frontend-dev"],
-      "escalates_to": ["ceo"],
+      "deliverables": [
+        "requirements-docs",
+        "user-stories",
+        "kpi-dashboards",
+        "priority-matrices"
+      ],
+      "collaborates_with": [
+        "tech-lead",
+        "doc-writer",
+        "frontend-dev"
+      ],
+      "escalates_to": [
+        "ceo"
+      ],
       "handoff_triggers": {
-        "requirement-change": ["tech-lead", "backend-dev", "frontend-dev"],
-        "priority-shift": ["tech-lead", "ceo"],
-        "user-feedback": ["frontend-dev", "doc-writer"],
-        "kpi-anomaly": ["ceo"]
-      }
+        "requirement-change": [
+          "tech-lead",
+          "backend-dev",
+          "frontend-dev"
+        ],
+        "priority-shift": [
+          "tech-lead",
+          "ceo"
+        ],
+        "user-feedback": [
+          "frontend-dev",
+          "doc-writer"
+        ],
+        "kpi-anomaly": [
+          "ceo"
+        ]
+      },
+      "required_tools": []
     }
   }
 }

@@ -679,10 +679,18 @@ build_system_prompt() {
     done
   fi
 
-  # Add handoff protocol from role template
+  # Add handoff protocol and core principles from role template
   if [[ -f "$ROLE_TEMPLATES" ]] && command -v jq &>/dev/null; then
+    local principles_json
+    principles_json="$(jq -r ".role_templates[\"${AGENT_ROLE}\"].core_principles // []" "$ROLE_TEMPLATES" 2>/dev/null)"
+    if [[ "$principles_json" != "[]" && "$principles_json" != "null" ]]; then
+      prompt+="## Core Principles (Buddhist Epistemic Methods)\n\n"
+      prompt+="You must adhere to the following principles to prevent hallucination, eliminate root causes, and maintain steadiness:\n"
+      prompt+="$(echo "$principles_json" | jq -r '.[] | "- \(.)"' 2>/dev/null)\n\n"
+    fi
+
     local handoff_json
-    handoff_json="$(jq -r ".role_templates.${AGENT_ROLE}.handoff_triggers // {}" "$ROLE_TEMPLATES" 2>/dev/null)"
+    handoff_json="$(jq -r ".role_templates[\"${AGENT_ROLE}\"].handoff_triggers // {}" "$ROLE_TEMPLATES" 2>/dev/null)"
     if [[ "$handoff_json" != "{}" && "$handoff_json" != "null" ]]; then
       prompt+="## Handoff Protocol\n\n"
       prompt+="When your work triggers a handoff event, generate a brief for the relevant roles:\n"

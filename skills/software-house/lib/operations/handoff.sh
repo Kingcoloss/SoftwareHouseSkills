@@ -38,14 +38,6 @@ find_brief() {
   printf '%s' "$found"
 }
 
-# Read a frontmatter field from a file
-# Usage: fm_field <file> <field>
-fm_field() {
-  local file="$1"
-  local field="$2"
-  sed -n '/^---$/,/^---$/p' "$file" | grep "^${field}:" | head -1 | sed "s/^${field}:[[:space:]]*//"
-}
-
 # Generate a brief ID
 brief_id() {
   local from="$1"
@@ -78,7 +70,7 @@ op_handoff_list() {
   local search_dirs=()
   if [ -n "$team_filter" ]; then
     local project_path
-    project_path=$(jq -r --arg t "$team_filter" 'if .projects then .projects | to_entries[] | select(.value.team == $t or .key | test(".*" + $t + ".*")) | .key else empty end' "$PROJECTS_INDEX" 2>/dev/null | head -1)
+    project_path=$(jq -r --arg t "$team_filter" 'if .projects then .projects | to_entries[] | select(.value.team == $t or (.key | test(".*" + $t + ".*"))) | .key else empty end' "$PROJECTS_INDEX" 2>/dev/null | head -1)
     if [ -n "$project_path" ] && [ -d "$project_path/.software-house/team/wiki/handoffs/briefs" ]; then
       search_dirs+=("$project_path/.software-house/team/wiki/handoffs/briefs")
     fi
@@ -418,12 +410,15 @@ op_handoff_generate() {
       local target_deliverables
       target_deliverables=$(jq -r ".role_templates[\"$target_role\"].deliverables | if . then join(\", \") else \"none specified\" end" "$templates_file" 2>/dev/null)
 
-      # Create brief file
+      log_info "Optimizing task description for handoff to $target_role..."
+      local optimized_task
+      optimized_task="$(optimize_text "$task")"
+
       cat > "$brief_file" << BRIEF_EOF
 ---
 from: ${from_agent}
 to: ${target_role}
-task: "${task}"
+task: "${optimized_task}"
 priority: ${priority}
 context_pages: [$(printf '%s' "${context_pages[*]}" | sed 's/ /, /g')]
 created_at: ${now}
@@ -436,7 +431,7 @@ brief_id: ${bid}
 
 ## Task
 
-${task}
+${optimized_task}
 
 ## Context
 

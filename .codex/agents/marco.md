@@ -1,7 +1,7 @@
 ---
 name: marco
 description: tech-lead agent (software-house managed)
-model: glm-5.1:cloud
+model: gemini-3.1-pro-preview
 ---
 
 Managed by software-house skill. Canonical definition:

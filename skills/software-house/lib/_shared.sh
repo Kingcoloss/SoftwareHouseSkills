@@ -34,8 +34,10 @@ set -euo pipefail
 : "${MODELS_CONFIG:=$CONFIG_HOME/models-config.json}"
 : "${TOOLS_CONFIG:=$CONFIG_HOME/tools-config.json}"
 : "${TOOLS_LOCAL:=$CONFIG_HOME/tools-config.local.json}"
+: "${ROLE_TEMPLATES:=$CONFIG_HOME/role-templates.json}"
 
 # Per-team paths (resolved at runtime based on PROJECT)
+: "${PROJECT:=$(pwd)}"
 : "${TEAM_DIR:=$PROJECT/.software-house/team}"
 : "${TEAM_SPRINTS:=$TEAM_DIR/sprints}"
 : "${TEAM_BACKLOG:=$TEAM_DIR/backlog.md}"
@@ -56,6 +58,15 @@ SCHEMA_DIR="$SKILL_SRC/schemas"
 OPERATIONS_DIR="$SKILL_SRC/operations"
 TEMPLATES_DIR="$SKILL_SRC/templates"
 CONFIG_SRC_DIR="$SKILL_SRC/config"
+
+# fm_field <file> <field>
+# Extracts a frontmatter field value from a markdown file.
+fm_field() {
+  local file="$1"
+  local field="$2"
+  [[ -f "$file" ]] || return 1
+  sed -n '/^---$/,/^---$/p' "$file" | grep "^${field}:" | head -1 | sed "s/^${field}:[[:space:]]*//" | sed 's/^"//;s/"$//' || true
+}
 
 # ---------------------------------------------------------------------------
 # Logging (mirrors _shared.md section 11)
@@ -339,9 +350,9 @@ write_agent() {
 
   local tmp="${file}.tmp"
   {
-    printf '---\n'
+    printf '%s\n' '---'
     printf '%s\n' "$fm"
-    printf '---\n'
+    printf '%s\n' '---'
     printf '%s\n' "$body"
   } > "$tmp"
 
@@ -658,7 +669,7 @@ get_role_template_field() {
     load_role_templates
   fi
   if command -v jq &>/dev/null; then
-    echo "$ROLE_TEMPLATES_JSON" | jq -r ".role_templates.${role}.${field} // empty" 2>/dev/null
+    echo "$ROLE_TEMPLATES_JSON" | jq -r ".role_templates[\"${role}\"].${field} // empty" 2>/dev/null
   else
     log_warn "jq not found -- cannot extract role template field"
     echo ""
@@ -776,6 +787,45 @@ detect_harness_cli() {
     ""|null|none)       return 1 ;;
     *)                  return 1 ;;
   esac
+}
+
+# get_harness_tools <harness>
+# Returns a comma-separated list of tools supported by the harness.
+get_harness_tools() {
+  local harness="$1"
+  case "$harness" in
+    claude-code) echo "read_file,write_file,replace,grep,run_shell_command,mcp_notebooklm,web_fetch" ;;
+    codex)       echo "read_file,write_file,replace,grep,run_shell_command" ;;
+    gemini)      echo "read_file,write_file,replace,grep,run_shell_command,mcp_notebooklm" ;;
+    *)           echo "read_file,write_file,replace,grep,run_shell_command" ;; # Direct/fallback assumption
+  esac
+}
+
+# validate_role_harness_support <role> <harness>
+# Returns 0 if harness supports all required tools for the role, 1 otherwise.
+validate_role_harness_support() {
+  local role="$1"
+  local harness="$2"
+
+  [[ -f "$ROLE_TEMPLATES" ]] || return 0
+  command -v jq &>/dev/null || return 0
+
+  local required_tools
+  required_tools=$(jq -r ".role_templates[\"$role\"].required_tools | join(\",\")" "$ROLE_TEMPLATES" 2>/dev/null)
+  [[ -z "$required_tools" || "$required_tools" == "null" ]] && return 0
+
+  local supported_tools
+  supported_tools=$(get_harness_tools "$harness")
+
+  IFS=',' read -ra REQ_ARR <<< "$required_tools"
+  for tool in "${REQ_ARR[@]}"; do
+    if [[ ! ",$supported_tools," =~ ,$tool, ]]; then
+      log_error "Role '$role' requires tool '$tool', but harness '$harness' does not support it."
+      return 1
+    fi
+  done
+
+  return 0
 }
 
 # is_valid_harness <harness-id> [<provider>]
@@ -1052,4 +1102,68 @@ spawn_subagent() {
   printf 'SPAWN: task=%s assignee=%s role=%s tools=[%s]\n' "$task_id" "$assignee" "$role" "$tools"
   printf 'OUTPUT: %s\n' "$output_path"
   printf 'PROMPT: %s\n' "$prompt_text"
+}
+
+# ---------------------------------------------------------------------------
+# Token Optimizer Hook
+# ---------------------------------------------------------------------------
+
+# optimize_text <raw_text>
+# Compresses technical context to save tokens. Prints optimized text to stdout.
+optimize_text() {
+  local raw_text="$1"
+
+  if (( DRY_RUN )); then
+    printf '%s' "$raw_text"
+    return 0
+  fi
+
+  # Ensure config is loaded
+  [[ -z "${MODELS_JSON:-}" ]] && load_models
+
+  # Get optimizer config
+  local opt_provider opt_model opt_effort opt_harness
+  if [[ -n "${MODELS_JSON:-}" ]] && command -v jq &>/dev/null; then
+    opt_provider=$(echo "$MODELS_JSON" | jq -r '.optimizer.provider // "google"' 2>/dev/null)
+    opt_model=$(echo "$MODELS_JSON" | jq -r '.optimizer.model // "gemini-2.5-flash"' 2>/dev/null)
+    opt_effort=$(echo "$MODELS_JSON" | jq -r '.optimizer.effort // "low"' 2>/dev/null)
+    opt_harness=$(echo "$MODELS_JSON" | jq -r '.optimizer.harness // "gemini"' 2>/dev/null)
+  else
+    opt_provider="google"
+    opt_model="gemini-2.5-flash"
+    opt_effort="low"
+    opt_harness="gemini"
+  fi
+
+  local sys_prompt="You are a Senior Technical Editor. Rewrite the input into a high-density, concise technical summary. 
+RULES:
+1. REMOVE all conversational filler, greetings, and intros.
+2. PRESERVE 100% of technical facts, file paths, code snippets, IDs, and architecture details.
+3. STRUCTURE the output using clear bullet points or markdown headers.
+4. DO NOT miss any key issues or critical observations.
+5. Output ONLY the technical result, no conversational wrappers."
+
+  local optimized=""
+  
+  # Try to use configured harness if available
+  if [[ "$opt_harness" == "gemini" ]] && command -v gemini &>/dev/null; then
+    local model_flag=""
+    [[ -n "$opt_model" && "$opt_model" != "null" ]] && model_flag="-m $opt_model"
+    
+    optimized=$(echo "$raw_text" | gemini -p "$sys_prompt" $model_flag -y -o text 2>/dev/null)
+  elif [[ "$opt_provider" == "ollama" ]] && command -v ollama &>/dev/null; then
+    # Simple ollama run for local optimization if gemini not available or ollama requested
+    local model="${opt_model:-qwen3-coder:7b}"
+    optimized=$(printf "%s\n\nContext:\n%s" "$sys_prompt" "$raw_text" | ollama run "$model" 2>/dev/null)
+  elif command -v gemini &>/dev/null; then
+    # Default fallback to gemini if nothing else matches
+    optimized=$(echo "$raw_text" | gemini -p "$sys_prompt" -m gemini-2.5-flash -y -o text 2>/dev/null)
+  fi
+
+  if [[ -n "$optimized" ]]; then
+    echo "$optimized" | sed 's/^Here is the optimized text://i; s/^Optimized://i' | sed 's/^[[:space:]]*//;s/[[:space:]]*$//'
+  else
+    # Final fallback: return original text
+    printf '%s' "$raw_text"
+  fi
 }

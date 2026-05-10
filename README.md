@@ -17,8 +17,13 @@ Core capabilities:
 - **Gamification**: XP, levels (1--5), achievements, skill tree, dashboard
 - **Scrum**: backlog management (add/list/prioritize) and sprint lifecycle (create/plan/board/standup/review/retro)
 - **Plan execution**: plan-create, plan-confirm, plan-execute (auto-spawn parallel sub-agents), plan-status, plan-synthesize
+- **Cross-project analysis**: aggregate architectural context across multiple linked repositories via `plan cross-project`
 - **Sub-agent spawning**: `bin/sh-agent` CLI executor with provider adapters (Ollama, LMStudio, vLLM, Anthropic) and three-tier fallback (harness -> direct provider -> Claude)
 - **Harness routing**: route a sub-agent through another CLI (claude-code, codex, gemini, ollama:<integration>) via the `harness` frontmatter field
+- **Harness tool validation**: automated checks ensure an agent's harness supports the specific tools required for its role
+- **Token optimization**: multi-layered 'Senior Technical Editor' hook producing high-density technical summaries for all communications
+- **CEO-to-agent gateway**: bypass triggers and send direct directive messages to any agent via `gateway`
+- **Dhamma integration**: Buddhist epistemic methods (Kalāma, Yoniso Manasikāra, etc.) injected into agent system prompts to reduce hallucination
 - **Inter-agent handoff**: structured briefs in `wiki/handoffs/inbox/` and `completed/`, with list/show/complete/generate subcommands
 - **LLM Wiki**: compiled entity, concept, decision, and synthesis pages regenerated on every state change for fast, structured context
 - **Wiki ingestion and lint**: archive raw sources, compile into wiki pages, and run 8 health checks (confidence drift, stale pages, broken wikilinks, orphan pages, etc.)
@@ -118,7 +123,7 @@ When reading config, the overlay merges with and overrides the base file.
 
 ### Version and Migrations
 
-The skill ships a `VERSION` file (semver, currently `0.9.0`). On update:
+The skill ships a `VERSION` file (semver, currently `0.10.0`). On update:
 
 - **Same version**: prompts to confirm re-install (or skips with `--force`).
 - **Upgrade**: shows CHANGELOG entries between versions, runs pending migrations, then installs.
@@ -325,7 +330,7 @@ Two bash CLIs ship in `bin/`:
 
 ```sh
 bin/software-house --help
-bin/software-house --version          # 0.9.0
+bin/software-house --version          # 0.10.0
 bin/software-house hire --help        # Per-command help
 bin/software-house list people --dry-run  # Preview without changes
 
@@ -426,12 +431,14 @@ Every state-modifying operation appends one JSONL line to `~/.software-house/com
 | `plan execute`     | Auto-spawn parallel sub-agents per topological wave         | 3         |
 | `plan status`      | Show progress of a plan                                     | 1         |
 | `plan synthesize`  | Combine sub-agent outputs into a single deliverable          | 3         |
+| `plan cross-project` | Aggregate architectural context across microservice repos  | 2         |
 
 ### Phase 7 -- Sub-Agent Delegation
 
 | Command     | Description                                                            | Risk Tier |
 |-------------|------------------------------------------------------------------------|-----------|
-| `delegate`  | Hand a task to a configured agent. `--execute` runs it inline; `--watch` tails the output | 3         |
+| `delegate`  | Hand a task to a configured agent. `--execute` runs it inline          | 3         |
+| `gateway`   | Send a direct message/directive to an agent from the CEO               | 2         |
 
 ### Phase 8 -- Inter-Agent Handoff
 
@@ -518,7 +525,7 @@ SoftwareHouseSkills/
     SKILL.md                                    <- Claude Code entry point
     AGENTS.md                                   <- Codex entry point
     GEMINI.md                                   <- Gemini entry point
-    VERSION                                     <- Semver (0.9.0)
+    VERSION                                     <- Semver (0.10.0)
     CHANGELOG.md                                <- Keep a Changelog format
     manifest.yaml                               <- Operation manifest
     bin/
